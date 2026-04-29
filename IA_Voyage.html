@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IA Voyage — Ponts, météo & suggestions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Caveat:wght@400;700&family=Inter:wght@400;500;600;700&family=Shadows+Into+Light&display=swap" rel="stylesheet">
+<style>
+  /* ============ TOKENS ============ */
+  :root {
+    --cyan:        #1AB5CB;
+    --cyan-soft:   #A7E4EC;
+    --cyan-ink:    #0E7A89;
+    --yellow:      #FFD93D;
+    --yellow-soft: #FFF1A8;
+    --paper:       #F5EFE4;
+    --paper-dark:  #E9E1D2;
+    --ink:         #1A1A1A;
+    --ink-soft:    #3A3A3A;
+    --muted:       #7A7365;
+    --coral:       #FF6B5B;
+    --mint:        #9BE3B8;
+    --shadow:      0 6px 18px rgba(26,26,26,.08), 0 1px 2px rgba(26,26,26,.05);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background-color: var(--paper);
+    background-image:
+      radial-gradient(1200px 800px at 20% 10%, rgba(255,255,255,.55), transparent 60%),
+      radial-gradient(900px 700px at 90% 30%, rgba(167,228,236,.25), transparent 55%),
+      radial-gradient(700px 600px at 50% 110%, rgba(255,217,61,.12), transparent 50%),
+      repeating-linear-gradient(37deg, rgba(0,0,0,.015) 0 2px, transparent 2px 7px),
+      repeating-linear-gradient(-52deg, rgba(0,0,0,.015) 0 2px, transparent 2px 11px);
+    background-attachment: fixed;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3 { font-family: 'Anton', 'Bebas Neue', sans-serif; font-weight: 400; letter-spacing: .5px; line-height: .95; text-transform: uppercase; margin: 0; }
+  h1 { font-size: clamp(36px, 6vw, 68px); line-height: .9; }
+  h2 { font-size: clamp(26px, 4vw, 44px); }
+  h3 { font-size: clamp(20px, 2.5vw, 26px); }
+
+  .container { max-width: 1180px; margin: 0 auto; padding: 28px 22px 80px; }
+
+  /* ============ HERO ============ */
+  .hero { position: relative; padding: 24px 30px 28px; margin-bottom: 20px; }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; background: var(--paper);
+    border-radius: 4px; box-shadow: var(--shadow);
+    clip-path: polygon(
+      0 3%, 5% 0, 12% 2%, 22% 0, 34% 3%, 46% 1%, 58% 3%, 70% 0, 82% 2%, 93% 0, 100% 3%,
+      100% 97%, 94% 100%, 84% 98%, 72% 100%, 60% 97%, 48% 100%, 36% 98%, 24% 100%, 12% 98%, 4% 100%, 0 97%
+    );
+    z-index: 0;
+  }
+  .hero > * { position: relative; z-index: 1; }
+  .hero .eyebrow { font-family: 'Caveat', cursive; font-size: 24px; color: var(--cyan-ink); display: inline-block; transform: rotate(-3deg); margin-bottom: -2px; }
+  .hero h1 span.accent { color: var(--cyan); }
+  .hero h1 span.highlight { background: linear-gradient(180deg, transparent 55%, var(--yellow) 55%, var(--yellow) 92%, transparent 92%); padding: 0 6px; }
+  .hero h1 { margin: 2px 0 0; }
+  .hero .tagline { margin-top: 10px; font-size: 15px; color: var(--ink-soft); max-width: 680px; }
+  .sparkle { color: var(--yellow); font-size: 1.3em; display: inline-block; transform: rotate(-8deg); }
+
+  /* ============ TABS ============ */
+  .tabs {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    margin-bottom: 0; padding-bottom: 0;
+    position: relative; z-index: 2;
+  }
+  .tab {
+    font-family: 'Anton', sans-serif; font-size: 16px; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 14px 22px;
+    border: 3px solid var(--ink); background: var(--paper); color: var(--ink);
+    cursor: pointer; box-shadow: 4px 4px 0 var(--ink);
+    transition: all .12s ease; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .tab:hover { transform: translate(1px, 1px); box-shadow: 3px 3px 0 var(--ink); }
+  .tab.active {
+    background: var(--cyan); color: #fff;
+    transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink);
+  }
+  .tab .ico { font-size: 18px; }
+
+  /* ============ PAPER CARDS ============ */
+  .paper-card {
+    position: relative; background: var(--paper);
+    padding: 30px 32px 34px; margin-bottom: 28px;
+    box-shadow: var(--shadow); border-radius: 2px;
+  }
+  .paper-card::before {
+    content: ""; position: absolute; inset: 0; background: var(--paper);
+    clip-path: polygon(
+      1% 2%, 6% 0, 18% 2%, 30% 1%, 42% 2%, 55% 0, 68% 2%, 80% 1%, 92% 2%, 100% 0,
+      100% 98%, 92% 100%, 80% 98%, 68% 100%, 55% 98%, 42% 99%, 30% 97%, 18% 100%, 6% 98%, 0 100%
+    );
+    z-index: 0;
+  }
+  .paper-card > * { position: relative; z-index: 1; }
+  .paper-card h2 { margin-bottom: 4px; }
+  .paper-card .section-sub {
+    font-family: 'Caveat', cursive; color: var(--cyan-ink);
+    font-size: 22px; margin-bottom: 18px; display: inline-block; transform: rotate(-1.5deg);
+  }
+
+  .dash-sep { border: 0; border-top: 2px dashed var(--cyan); margin: 22px 0; opacity: .5; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: fadein .25s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ============ FORMS ============ */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px 22px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label {
+    font-family: 'Anton', sans-serif; font-weight: 400; font-size: 13px;
+    letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink);
+  }
+  .field .hint { font-family: 'Caveat', cursive; color: var(--muted); font-size: 15px; margin-top: -2px; }
+  .field input, .field select, .field textarea {
+    font-family: 'Inter', sans-serif; font-size: 15px; padding: 10px 14px;
+    border: 2px solid var(--ink); background: #fff; border-radius: 0;
+    outline: none; color: var(--ink); transition: all .12s ease;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--cyan); box-shadow: 4px 4px 0 var(--cyan); transform: translate(-2px, -2px);
+  }
+  .field textarea { resize: vertical; min-height: 70px; }
+  .field-full { grid-column: 1 / -1; }
+
+  /* ============ BUTTONS ============ */
+  .btn {
+    font-family: 'Anton', sans-serif; font-weight: 400; font-size: 18px;
+    letter-spacing: 1.4px; text-transform: uppercase; padding: 13px 26px;
+    border: 3px solid var(--ink); background: var(--cyan); color: #fff;
+    cursor: pointer; border-radius: 0; box-shadow: 5px 5px 0 var(--ink);
+    transition: all .12s ease; display: inline-flex; align-items: center; gap: 10px;
+    margin-top: 14px;
+  }
+  .btn:hover { transform: translate(2px, 2px); box-shadow: 3px 3px 0 var(--ink); }
+  .btn:active { transform: translate(5px, 5px); box-shadow: 0 0 0 var(--ink); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.btn-yellow { background: var(--yellow); color: var(--ink); }
+  .btn.btn-ghost { background: var(--paper); color: var(--ink); }
+
+  /* ============ TAGS / STATS ============ */
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'Anton', sans-serif; font-size: 12px; letter-spacing: 1.2px;
+    text-transform: uppercase; padding: 4px 11px;
+    background: var(--cyan); color: #fff; border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .tag.yellow { background: var(--yellow); color: var(--ink); }
+  .tag.mint   { background: var(--mint); color: var(--ink); }
+  .tag.coral  { background: var(--coral); color: #fff; }
+  .tag.plain  { background: var(--paper-dark); color: var(--ink); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin: 18px 0 8px; }
+  .stat { background: #fff; border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--cyan); padding: 14px 16px; }
+  .stat .num { font-family: 'Anton'; font-size: 38px; line-height: 1; color: var(--cyan); }
+  .stat .lbl { font-family: 'Bebas Neue'; letter-spacing: 2px; color: var(--muted); margin-top: 4px; font-size: 12px; text-transform: uppercase; }
+
+  /* ============ WEATHER ============ */
+  .weather-now {
+    background: #fff; border: 2px solid var(--ink); padding: 22px 24px;
+    box-shadow: 6px 6px 0 var(--cyan); display: grid;
+    grid-template-columns: auto 1fr auto; gap: 20px; align-items: center;
+  }
+  .weather-now .big { font-family: 'Anton'; font-size: 72px; line-height: 1; color: var(--cyan-ink); }
+  .weather-now .loc { font-family: 'Anton'; font-size: 28px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .weather-now .sub { font-family: 'Caveat', cursive; color: var(--muted); font-size: 18px; }
+  .weather-now .ic  { font-size: 58px; }
+  .weather-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin-top: 20px; }
+  .weather-day { background: #fff; border: 2px solid var(--ink); padding: 12px 10px; text-align: center; box-shadow: 3px 3px 0 var(--cyan-ink); }
+  .weather-day .d { font-family: 'Anton'; font-size: 13px; letter-spacing: 1px; color: var(--cyan-ink); }
+  .weather-day .t { font-family: 'Anton'; font-size: 26px; line-height: 1; margin: 4px 0 2px; }
+  .weather-day .r { font-family: 'Caveat', cursive; font-size: 14px; color: var(--muted); }
+  .weather-day .ic { font-size: 24px; margin: 2px 0; }
+
+  /* ============ BRIDGES LIST ============ */
+  .bridge-list { display: grid; gap: 10px; margin-top: 16px; }
+  .bridge-row {
+    display: grid; grid-template-columns: 200px 1fr auto auto; gap: 14px; align-items: center;
+    padding: 12px 16px; background: #fff; border: 2px solid var(--ink); font-size: 14px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .bridge-row .bdate { font-family: 'Anton'; color: var(--cyan-ink); font-size: 14px; letter-spacing: 1px; }
+  .bridge-row .bname { font-weight: 600; }
+  .bridge-row .bname small { display:block; font-weight:400; color: var(--muted); font-size: 12px; font-family: 'Caveat', cursive; font-size: 15px; }
+  .bridge-row .bstats { display: flex; gap: 6px; flex-wrap: wrap; }
+  .bridge-row button.pick {
+    font-family: 'Anton'; font-size: 12px; letter-spacing: 1.2px;
+    padding: 6px 12px; border: 2px solid var(--ink); background: var(--yellow);
+    cursor: pointer; text-transform: uppercase; box-shadow: 2px 2px 0 var(--ink);
+  }
+  .bridge-row button.pick:hover { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); }
+
+  /* ============ SUGGESTIONS / DESTINATIONS ============ */
+  .suggestion-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin-top: 16px; }
+  .suggestion {
+    background: #fff; border: 2px solid var(--ink); padding: 20px;
+    box-shadow: 5px 5px 0 var(--yellow); position: relative;
+  }
+  .suggestion .stype {
+    position: absolute; top: -10px; left: 12px;
+    font-family: 'Anton'; font-size: 12px; letter-spacing: 1.2px;
+    padding: 4px 10px; background: var(--cyan); color: #fff;
+    border: 2px solid var(--ink); text-transform: uppercase;
+  }
+  .suggestion h3 { font-size: 24px; margin-bottom: 6px; color: var(--ink); }
+  .suggestion .sloc { font-family: 'Bebas Neue'; letter-spacing: 2px; color: var(--cyan-ink); font-size: 15px; margin-bottom: 10px; }
+  .suggestion .sdesc { font-size: 14px; color: var(--ink-soft); margin-bottom: 10px; }
+  .suggestion .smeta { font-family: 'Caveat', cursive; font-size: 16px; color: var(--muted); }
+
+  /* ============ PLANNING ============ */
+  .plan-list { display: grid; gap: 12px; }
+  .plan-row {
+    display: grid; grid-template-columns: 200px 1fr auto; gap: 16px;
+    padding: 16px 18px; background: #fff; border: 2px solid var(--ink);
+    box-shadow: 4px 4px 0 var(--ink); align-items: center;
+  }
+  .plan-row .when { font-family: 'Anton'; font-size: 14px; letter-spacing: 1px; color: var(--cyan-ink); }
+  .plan-row .what { font-weight: 600; }
+  .plan-row .what small { display:block; font-weight:400; color: var(--muted); font-size: 13px; margin-top:3px; }
+  .plan-row .cost { font-family: 'Anton'; font-size: 17px; color: var(--ink); text-align: right; }
+  .plan-row .cost small { display:block; font-family:'Caveat',cursive; font-size: 14px; color: var(--muted); letter-spacing:0; text-transform:none; }
+
+  .advice { background: #fff; border: 2px dashed var(--cyan); padding: 20px 24px; margin-top: 18px; }
+  .advice h3 { font-family: 'Anton'; color: var(--cyan-ink); margin: 14px 0 6px; font-size: 20px; }
+  .advice h3:first-child { margin-top: 0; }
+  .advice p { margin: 6px 0; }
+  .advice ul, .advice ol { margin: 6px 0 6px 24px; }
+  .advice li { margin: 4px 0; }
+  .advice strong { color: var(--cyan-ink); }
+
+  .destination-hero {
+    padding: 28px 30px; margin-top: 20px;
+    background: radial-gradient(600px 400px at 80% 10%, rgba(255,217,61,.25), transparent 60%), var(--cyan-soft);
+    border: 3px solid var(--ink); box-shadow: 7px 7px 0 var(--ink);
+  }
+  .destination-hero .kicker { font-family: 'Caveat', cursive; font-size: 24px; color: var(--cyan-ink); transform: rotate(-2deg); display: inline-block; }
+  .destination-hero .city { font-family: 'Anton', sans-serif; font-size: clamp(40px, 6vw, 68px); line-height: .95; margin: 4px 0 2px; text-transform: uppercase; }
+  .destination-hero .country { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--cyan-ink); }
+  .destination-hero .dates { margin-top: 12px; font-family: 'Anton', sans-serif; font-size: 18px; letter-spacing: 1.5px; }
+  .destination-hero .why { margin-top: 14px; font-size: 15px; color: var(--ink-soft); max-width: 720px; }
+
+  /* ============ LOADING / ERROR ============ */
+  .loading-wrap { display: none; margin-top: 18px; text-align: center; }
+  .loading-wrap.active { display: block; }
+  .loading-wrap .spinner {
+    display: inline-block; width: 46px; height: 46px;
+    border: 5px solid var(--cyan-soft); border-top-color: var(--cyan);
+    border-radius: 50%; animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-wrap .lbl { font-family: 'Caveat', cursive; color: var(--cyan-ink); font-size: 20px; margin-top: 6px; }
+
+  .error { background: #fff; border: 3px solid var(--coral); padding: 14px 18px; margin: 14px 0; color: var(--coral); box-shadow: 4px 4px 0 var(--coral); }
+  .error strong { color: var(--ink); }
+  .info { background: #fff; border: 2px dashed var(--cyan-ink); padding: 14px 18px; margin: 14px 0; color: var(--ink-soft); font-family: 'Caveat', cursive; font-size: 17px; }
+
+  /* ============ KEYS ============ */
+  /* ============ CALENDAR ============ */
+  .cal-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .cal-controls .field { flex: 0 0 140px; }
+  .cal-legend { display: flex; gap: 14px; flex-wrap: wrap; font-family: 'Caveat', cursive; font-size: 16px; color: var(--muted); margin: 6px 0 10px; align-items: center; }
+  .cal-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .cal-legend i { width: 14px; height: 14px; display: inline-block; border: 1.5px solid var(--ink); }
+  .cal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .cal-month {
+    background: #fff; border: 2px solid var(--ink); padding: 12px;
+    box-shadow: 4px 4px 0 var(--cyan-ink);
+  }
+  .cal-month .cal-head {
+    font-family: 'Anton'; font-size: 18px; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--cyan-ink); margin-bottom: 8px; padding-bottom: 6px;
+    border-bottom: 2px dashed var(--cyan-soft);
+  }
+  .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-days .dow {
+    font-family: 'Bebas Neue'; font-size: 10px; letter-spacing: 1px;
+    color: var(--muted); text-align: center; padding: 2px 0;
+  }
+  .cal-days .day {
+    font-family: 'Inter'; font-size: 12px; text-align: center;
+    padding: 5px 2px; border: 1.5px solid transparent;
+    position: relative; cursor: pointer; user-select: none;
+    transition: all .08s ease;
+  }
+  .cal-days .day.empty { cursor: default; }
+  .cal-days .day.weekend { color: var(--muted); background: rgba(0,0,0,.02); }
+  .cal-days .day.holiday {
+    background: var(--cyan); color: #fff; font-weight: 700;
+    border-color: var(--ink); box-shadow: 1px 1px 0 var(--ink);
+  }
+  .cal-days .day.bridge {
+    background: var(--yellow); color: var(--ink); font-weight: 700;
+    border-color: var(--ink);
+  }
+  .cal-days .day.selected {
+    background: var(--coral); color: #fff; border-color: var(--ink);
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .cal-days .day:not(.empty):not(.holiday):not(.bridge):not(.selected):hover {
+    background: var(--cyan-soft); border-color: var(--ink);
+  }
+  .cal-days .day[title] { cursor: help; }
+  .cal-selection-bar {
+    position: sticky; bottom: 10px; margin-top: 18px; padding: 12px 18px;
+    background: var(--ink); color: #fff; border: 3px solid var(--cyan);
+    box-shadow: 5px 5px 0 var(--cyan); display: none;
+    align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  }
+  .cal-selection-bar.active { display: flex; }
+  .cal-selection-bar .count { font-family: 'Anton'; font-size: 20px; letter-spacing: 1.5px; }
+  .cal-selection-bar .count small { font-family: 'Caveat', cursive; font-size: 16px; letter-spacing: 0; color: var(--cyan-soft); display: block; margin-top: 2px; }
+  .cal-selection-bar .bar-actions { display: flex; gap: 8px; }
+  .cal-selection-bar button {
+    font-family: 'Anton'; font-size: 13px; letter-spacing: 1.2px;
+    padding: 8px 14px; border: 2px solid var(--cyan); background: #fff; color: var(--ink);
+    cursor: pointer; text-transform: uppercase; box-shadow: 2px 2px 0 var(--cyan);
+  }
+  .cal-selection-bar button:hover { transform: translate(1px,1px); box-shadow: 1px 1px 0 var(--cyan); }
+  .cal-selection-bar button.primary { background: var(--yellow); color: var(--ink); border-color: var(--ink); box-shadow: 2px 2px 0 var(--ink); }
+
+  /* Selection UI dans Planning */
+  .plan-row.selected-plan { box-shadow: 4px 4px 0 var(--coral); border-color: var(--coral); }
+  .plan-check { accent-color: var(--cyan); width: 20px; height: 20px; cursor: pointer; margin-right: 6px; }
+  .plan-row label { cursor: pointer; display: contents; }
+  .plan-combine-bar {
+    position: sticky; bottom: 10px; z-index: 10; margin-top: 18px; padding: 14px 20px;
+    background: var(--ink); color: #fff; border: 3px solid var(--yellow);
+    box-shadow: 5px 5px 0 var(--yellow); display: none;
+    align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  }
+  .plan-combine-bar.active { display: flex; }
+  .plan-combine-bar .ccount { font-family: 'Anton'; font-size: 20px; letter-spacing: 1.5px; }
+  .plan-combine-bar .ccount small { font-family: 'Caveat', cursive; font-size: 16px; letter-spacing: 0; color: var(--yellow-soft); display: block; }
+  .plan-combine-bar button {
+    font-family: 'Anton'; font-size: 13px; letter-spacing: 1.2px;
+    padding: 8px 14px; border: 2px solid var(--ink); background: var(--yellow); color: var(--ink);
+    cursor: pointer; text-transform: uppercase; box-shadow: 2px 2px 0 var(--ink);
+  }
+
+  /* Year mini-calendar (aperçu global) */
+  .year-mini { margin-top: 18px; }
+  .year-mini h3 { font-family: 'Anton'; font-size: 18px; letter-spacing: 1.2px; color: var(--cyan-ink); margin-bottom: 8px; }
+  .year-mini-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+  .year-mini .cal-month { padding: 10px; box-shadow: 3px 3px 0 var(--cyan-ink); }
+  .year-mini .cal-month .cal-head { font-size: 13px; padding-bottom: 4px; margin-bottom: 6px; }
+  .year-mini .cal-days .dow { font-size: 9px; padding: 1px 0; }
+  .year-mini .cal-days .day { font-size: 10px; padding: 3px 1px; }
+  .year-mini .cal-days .day.in-trip { background: var(--coral); color: #fff; border-color: var(--ink); font-weight: 700; }
+  .year-mini .cal-days .day.trip-conge { background: var(--yellow); color: var(--ink); border-color: var(--ink); font-weight: 700; }
+
+  /* ============ PHOTOS (Pexels) ============ */
+  .photo-gallery {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px; margin-top: 20px;
+  }
+  .photo-card {
+    position: relative; overflow: hidden; border: 2px solid var(--ink);
+    box-shadow: 4px 4px 0 var(--cyan-ink); background: #fff; aspect-ratio: 4/3;
+  }
+  .photo-card img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s ease; }
+  .photo-card:hover img { transform: scale(1.05); }
+  .photo-card .credit {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,.75));
+    color: #fff; padding: 16px 10px 6px; font-family: 'Caveat', cursive;
+    font-size: 13px; text-align: right; opacity: 0; transition: opacity .2s;
+  }
+  .photo-card:hover .credit { opacity: 1; }
+  .photo-card .credit a { color: var(--yellow); text-decoration: none; }
+  .photo-card.tilted-1 { transform: rotate(-0.5deg); }
+  .photo-card.tilted-2 { transform: rotate(0.7deg); }
+  .photo-card.tilted-3 { transform: rotate(-0.3deg); }
+
+  /* ============ LIEUX À VISITER ============ */
+  .visit-list {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px; margin-top: 16px;
+  }
+  .visit-card {
+    background: #fff; border: 2px solid var(--ink); padding: 14px 16px;
+    box-shadow: 4px 4px 0 var(--ink); position: relative;
+  }
+  .visit-card .vtype {
+    position: absolute; top: -9px; left: 12px;
+    font-family: 'Anton'; font-size: 11px; letter-spacing: 1.4px;
+    padding: 3px 10px; background: var(--yellow); border: 2px solid var(--ink);
+    text-transform: uppercase; color: var(--ink);
+  }
+  .visit-card h4 {
+    font-family: 'Anton'; font-size: 19px; letter-spacing: 1px;
+    margin: 6px 0 4px; text-transform: uppercase;
+  }
+  .visit-card .vemoji { font-size: 22px; margin-right: 6px; }
+  .visit-card p { margin: 6px 0 0; font-size: 14px; line-height: 1.45; color: var(--ink-soft); }
+
+  /* ============ HÔTELS ============ */
+  .hotel-list {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px; margin-top: 16px;
+  }
+  .hotel-card {
+    background: #fff; border: 2px solid var(--ink); padding: 16px 18px;
+    box-shadow: 4px 4px 0 var(--cyan); text-align: center;
+  }
+  .hotel-card .gamme {
+    font-family: 'Anton'; font-size: 14px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--cyan-ink);
+  }
+  .hotel-card .stars { font-size: 16px; color: var(--yellow); margin: 4px 0; letter-spacing: 2px; }
+  .hotel-card .price {
+    font-family: 'Anton'; font-size: 30px; line-height: 1.1; color: var(--ink); margin: 6px 0 2px;
+  }
+  .hotel-card .price small { font-family: 'Caveat', cursive; font-size: 16px; color: var(--muted); letter-spacing: 0; text-transform: none; display: block; margin-top: 3px; }
+  .hotel-card .exemple { font-family: 'Caveat', cursive; color: var(--muted); font-size: 15px; margin-top: 6px; }
+  .hotel-note {
+    margin-top: 14px; padding: 10px 14px; background: var(--yellow-soft);
+    border: 2px dashed var(--ink); font-family: 'Caveat', cursive; font-size: 15px; color: var(--ink-soft);
+  }
+  .section-title {
+    font-family: 'Anton'; font-size: 24px; letter-spacing: 1.5px;
+    color: var(--cyan-ink); margin: 28px 0 4px; text-transform: uppercase;
+  }
+  .section-title-sub { font-family: 'Caveat', cursive; font-size: 17px; color: var(--muted); margin-bottom: 6px; display: block; }
+
+  .keys-details { margin-top: 40px; margin-bottom: 8px; }
+  .keys-details summary {
+    cursor: pointer; list-style: none;
+    font-family: 'Anton', sans-serif; font-size: 14px; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 10px 18px;
+    border: 2px solid var(--ink); background: var(--paper); color: var(--ink-soft);
+    box-shadow: 3px 3px 0 var(--ink); display: inline-block;
+    transition: all .12s ease;
+  }
+  .keys-details summary::-webkit-details-marker { display: none; }
+  .keys-details summary:hover { background: var(--cyan-soft); transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--ink); }
+  .keys-details[open] summary { background: var(--cyan); color: #fff; margin-bottom: 14px; }
+  .keys-card { background: #fff; border: 2px solid var(--ink); padding: 16px 22px; margin-bottom: 20px; box-shadow: 4px 4px 0 var(--cyan); }
+  .keys-card h3 { font-size: 18px; color: var(--cyan-ink); margin-bottom: 8px; }
+  .keys-card input { font-family: 'Inter'; font-size: 14px; padding: 9px 12px; border: 2px solid var(--ink); width: 100%; background: var(--paper); }
+  .keys-card .key-row { display: grid; grid-template-columns: 1fr 160px; gap: 10px; }
+  .keys-card label { font-family: 'Anton'; font-size: 12px; letter-spacing: 1.2px; }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-family: 'Caveat', cursive; font-size: 17px; color: var(--ink-soft); }
+  .checkbox-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--cyan); }
+
+  .tape { position: absolute; width: 86px; height: 22px; background: rgba(255, 217, 61, .75); top: -10px; left: 40px; transform: rotate(-4deg); box-shadow: 0 2px 4px rgba(0,0,0,.08); z-index: 5; }
+  .tape.right { left: auto; right: 40px; transform: rotate(3deg); background: rgba(26,181,203,.6); }
+  .tape.small { width: 58px; height: 18px; }
+
+  footer { text-align: center; padding: 24px 16px; color: var(--muted); font-family: 'Caveat', cursive; font-size: 17px; }
+
+  @media (max-width: 720px) {
+    .weather-now { grid-template-columns: 1fr; text-align: center; }
+    .bridge-row { grid-template-columns: 1fr; }
+    .plan-row { grid-template-columns: 1fr; }
+    .plan-row .cost { text-align: left; }
+    .keys-card .key-row { grid-template-columns: 1fr; }
+    .tab { font-size: 14px; padding: 11px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HERO -->
+  <div class="hero">
+    <span class="tape"></span>
+    <span class="tape right small"></span>
+    <div class="eyebrow">projet IA · pose tes congés malin <span class="sparkle">✦</span></div>
+    <h1>
+      OPTIMISE TES <span class="highlight">PONTS</span>,<br>
+      <span class="accent">VOYAGE MIEUX.</span>
+    </h1>
+    <p class="tagline">
+      Quatre outils, un site local : <b>météo historique</b> de n'importe quelle ville (3 ans Open-Meteo, sans clé),
+      <b>détection des ponts</b> 2026-2076, <b>suggestions IA</b> de destinations et <b>planning annuel</b> optimisé
+      selon ta situation familiale.
+    </p>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="planning"><span class="ico">🧳</span> PLANNING</button>
+    <button class="tab" data-tab="calendar"><span class="ico">📅</span> CALENDRIER</button>
+    <button class="tab" data-tab="ponts"><span class="ico">🌉</span> PONTS</button>
+    <button class="tab" data-tab="suggestions"><span class="ico">✨</span> SUGGESTIONS IA</button>
+    <button class="tab" data-tab="meteo"><span class="ico">🌤️</span> MÉTÉO</button>
+  </div>
+
+  <!-- =========== ONGLET 1 : MÉTÉO =========== -->
+  <div class="tab-panel" id="panel-meteo">
+    <div class="paper-card">
+      <span class="tape"></span>
+      <h2>MÉTÉO HISTORIQUE <span class="sparkle">✦</span></h2>
+      <div class="section-sub">✎ moyennes des 3 dernières années — aucune clé requise</div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label>Ville</label>
+          <input id="m_city" type="text" placeholder="Paris, Lisbonne, Nice…" value="Paris">
+          <span class="hint">n'importe où dans le monde</span>
+        </div>
+        <div class="field">
+          <label>Période — début</label>
+          <input id="m_debut" type="date" value="2026-07-14">
+        </div>
+        <div class="field">
+          <label>Période — fin</label>
+          <input id="m_fin" type="date" value="2026-07-21">
+        </div>
+      </div>
+
+      <button class="btn" id="btnMeteo"><span>✦</span> VOIR LA MÉTÉO <span>→</span></button>
+
+      <div class="loading-wrap" id="m_loading">
+        <div class="spinner"></div>
+        <div class="lbl">Géocodage + archive Open-Meteo…</div>
+      </div>
+      <div id="m_error"></div>
+      <div id="m_result" style="margin-top: 22px;"></div>
+    </div>
+  </div>
+
+  <!-- =========== ONGLET 2 : PONTS =========== -->
+  <div class="tab-panel" id="panel-ponts">
+    <div class="paper-card">
+      <span class="tape"></span>
+      <h2>DÉTECTION DES PONTS <span class="sparkle">✦</span></h2>
+      <div class="section-sub">✎ 561 jours fériés embarqués, 2026 → 2076</div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label>Période — début</label>
+          <input id="p_debut" type="date" value="2026-01-01">
+        </div>
+        <div class="field">
+          <label>Période — fin</label>
+          <input id="p_fin" type="date" value="2026-12-31">
+        </div>
+      </div>
+
+      <button class="btn" id="btnPonts"><span>✦</span> AFFICHER LES PONTS <span>→</span></button>
+
+      <div id="p_error"></div>
+      <div id="p_result" style="margin-top: 22px;"></div>
+    </div>
+  </div>
+
+  <!-- =========== ONGLET 3 : SUGGESTIONS IA =========== -->
+  <div class="tab-panel" id="panel-suggestions">
+    <div class="paper-card">
+      <span class="tape"></span>
+      <h2>SUGGESTIONS PAR L'IA <span class="sparkle">✦</span></h2>
+      <div class="section-sub">✎ 4 destinations taillées pour le pont + ta famille</div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label>Pont choisi — début</label>
+          <input id="s_debut" type="date" value="2026-05-14">
+        </div>
+        <div class="field">
+          <label>Pont choisi — fin</label>
+          <input id="s_fin" type="date" value="2026-05-17">
+        </div>
+        <div class="field">
+          <label>Ville de départ</label>
+          <input id="s_depart" type="text" value="Paris">
+        </div>
+        <div class="field">
+          <label>Situation familiale</label>
+          <select id="s_famille">
+            <option value="celibataire">Célibataire</option>
+            <option value="couple" selected>En couple sans enfant</option>
+            <option value="famille_petits">Famille — enfants &lt; 6 ans</option>
+            <option value="famille_enfants">Famille — enfants 6-12 ans</option>
+            <option value="famille_ados">Famille — ados 13-17 ans</option>
+            <option value="famille_mixte">Fratrie d'âges mélangés</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Nombre d'enfants</label>
+          <input id="s_nb_enfants" type="number" min="0" max="8" value="0">
+        </div>
+        <div class="field">
+          <label>Zone</label>
+          <select id="s_zone">
+            <option value="france" selected>France</option>
+            <option value="europe">Europe</option>
+            <option value="monde">Monde</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Budget (par personne)</label>
+          <select id="s_budget">
+            <option value="serre">Serré (&lt; 400€)</option>
+            <option value="moyen" selected>Moyen (400-900€)</option>
+            <option value="confortable">Confortable (900-1800€)</option>
+            <option value="luxe">Luxe (&gt; 1800€)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Ambiance</label>
+          <select id="s_ambiance">
+            <option value="nature">Nature / rando</option>
+            <option value="plage" selected>Plage / détente</option>
+            <option value="culture">Culture / city-trip</option>
+            <option value="aventure">Aventure / sport</option>
+            <option value="gastro">Gastronomie / œnologie</option>
+            <option value="famille">Parcs / activités famille</option>
+            <option value="ski">Ski / montagne hiver</option>
+            <option value="roadtrip">Road-trip</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Trajet max (h)</label>
+          <input id="s_trajet" type="number" min="1" max="24" value="6">
+        </div>
+        <div class="field field-full">
+          <label>Envies / infos complémentaires</label>
+          <textarea id="s_envies" placeholder="Ex: on adore la randonnée en montagne, on a déjà fait l'Espagne…"></textarea>
+        </div>
+      </div>
+
+      <button class="btn" id="btnSuggest"><span>✦</span> GÉNÉRER 4 DESTINATIONS <span>→</span></button>
+
+      <div class="loading-wrap" id="s_loading">
+        <div class="spinner"></div>
+        <div class="lbl">L'IA réfléchit à 4 destinations…</div>
+      </div>
+      <div id="s_error"></div>
+      <div id="s_result" style="margin-top: 22px;"></div>
+    </div>
+  </div>
+
+  <!-- =========== ONGLET 4 : PLANNING =========== -->
+  <div class="tab-panel active" id="panel-planning">
+    <div class="paper-card">
+      <span class="tape"></span>
+      <h2>PLANNING ANNUEL <span class="sparkle">✦</span></h2>
+      <div class="section-sub">✎ l'IA répartit tes congés &amp; choisit une destination</div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label>Ville de départ</label>
+          <input id="pl_depart" type="text" value="Paris">
+        </div>
+        <div class="field">
+          <label>Jours de congés disponibles</label>
+          <input id="pl_conges" type="number" min="1" max="60" value="10">
+        </div>
+        <div class="field">
+          <label>Année / période — début</label>
+          <input id="pl_debut" type="date" value="2026-01-01">
+        </div>
+        <div class="field">
+          <label>Année / période — fin</label>
+          <input id="pl_fin" type="date" value="2026-12-31">
+        </div>
+        <div class="field">
+          <label>Situation familiale</label>
+          <select id="pl_famille">
+            <option value="celibataire">Célibataire</option>
+            <option value="couple" selected>En couple sans enfant</option>
+            <option value="famille_petits">Famille — enfants &lt; 6 ans</option>
+            <option value="famille_enfants">Famille — enfants 6-12 ans</option>
+            <option value="famille_ados">Famille — ados 13-17 ans</option>
+            <option value="famille_mixte">Fratrie d'âges mélangés</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Nombre d'enfants</label>
+          <input id="pl_nb_enfants" type="number" min="0" max="8" value="0">
+        </div>
+        <div class="field">
+          <label>Zone</label>
+          <select id="pl_zone">
+            <option value="france" selected>France</option>
+            <option value="europe">Europe</option>
+            <option value="monde">Monde</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Budget</label>
+          <select id="pl_budget">
+            <option value="serre">Serré</option>
+            <option value="moyen" selected>Moyen</option>
+            <option value="confortable">Confortable</option>
+            <option value="luxe">Luxe</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Ambiance</label>
+          <select id="pl_ambiance">
+            <option value="nature">Nature / rando</option>
+            <option value="plage" selected>Plage / détente</option>
+            <option value="culture">Culture / city-trip</option>
+            <option value="aventure">Aventure / sport</option>
+            <option value="gastro">Gastronomie</option>
+            <option value="famille">Parcs / famille</option>
+            <option value="ski">Ski / montagne</option>
+            <option value="roadtrip">Road-trip</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Trajet max (h)</label>
+          <input id="pl_trajet" type="number" min="1" max="24" value="6">
+        </div>
+        <div class="field field-full">
+          <label>Contraintes professionnelles</label>
+          <textarea id="pl_contraintes" placeholder="Ex: pas de congés en septembre, astreintes le 1er du mois…"></textarea>
+        </div>
+        <div class="field field-full">
+          <label>Envies / infos</label>
+          <textarea id="pl_envies" placeholder="Ex: on veut absolument voir la mer en juillet…"></textarea>
+        </div>
+      </div>
+
+      <button class="btn" id="btnPlan"><span>✦</span> OPTIMISER MON ANNÉE <span>→</span></button>
+
+      <div class="loading-wrap" id="pl_loading">
+        <div class="spinner"></div>
+        <div class="lbl" id="pl_lbl">L'IA réfléchit au meilleur planning…</div>
+      </div>
+      <div id="pl_error"></div>
+      <div id="pl_result" style="margin-top: 22px;"></div>
+    </div>
+  </div>
+
+  <!-- =========== ONGLET 5 : CALENDRIER =========== -->
+  <div class="tab-panel" id="panel-calendar">
+    <div class="paper-card">
+      <span class="tape"></span>
+      <h2>CALENDRIER DES FÉRIÉS <span class="sparkle">✦</span></h2>
+      <div class="section-sub">✎ clique sur des jours pour proposer une destination</div>
+
+      <div class="cal-controls">
+        <div class="field">
+          <label>Année</label>
+          <input id="cal_year" type="number" min="2026" max="2076" value="2026">
+        </div>
+        <button class="btn btn-ghost" id="btnCalPrev" style="margin-top:0;">← Année</button>
+        <button class="btn btn-ghost" id="btnCalNext" style="margin-top:0;">Année →</button>
+        <button class="btn btn-ghost" id="btnCalClear" style="margin-top:0;">✕ Vider sélection</button>
+      </div>
+
+      <div class="cal-legend">
+        <span><i style="background:var(--cyan);"></i> Jour férié</span>
+        <span><i style="background:var(--yellow);"></i> Pont optimal</span>
+        <span><i style="background:var(--coral);"></i> Ma sélection</span>
+        <span><i style="background:rgba(0,0,0,.05);"></i> Week-end</span>
+      </div>
+
+      <div id="cal_grid" class="cal-grid"></div>
+
+      <div id="cal_sel_bar" class="cal-selection-bar">
+        <div class="count">
+          <span id="cal_sel_count">0</span> jours sélectionnés
+          <small id="cal_sel_range">—</small>
+        </div>
+        <div class="bar-actions">
+          <button id="btnCalSuggest" class="primary">✦ Voir suggestions pour cette période →</button>
+          <button id="btnCalReset">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEYS (caché par défaut, repliable) -->
+  <details class="keys-details">
+    <summary>⚙️ Paramètres avancés (clés OpenAI / Pexels / Makcorps)</summary>
+    <div class="keys-card">
+      <h3>🔑 CLÉ OPENAI — <small style="font-family:'Caveat',cursive;color:var(--muted);font-size:15px;">pour Suggestions, Planning, Lieux &amp; Hôtels</small></h3>
+      <div class="key-row">
+        <input id="apiKey" type="password" placeholder="sk-proj-…" autocomplete="off">
+        <button class="btn btn-ghost" style="font-size:13px; padding:9px 14px; box-shadow:3px 3px 0 var(--ink); margin-top:0;" onclick="toggleKey()">Afficher / Masquer</button>
+      </div>
+      <div class="field" style="margin-top:10px;">
+        <label>Modèle</label>
+        <select id="apiModel">
+          <option value="gpt-4o-mini" selected>gpt-4o-mini (le moins cher, recommandé)</option>
+          <option value="gpt-4o">gpt-4o</option>
+          <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+          <option value="gpt-4.1">gpt-4.1</option>
+        </select>
+      </div>
+
+      <hr class="dash-sep">
+
+      <h3>📸 CLÉ PEXELS — <small style="font-family:'Caveat',cursive;color:var(--muted);font-size:15px;">photos des villes dans l'onglet Météo</small></h3>
+      <div class="key-row">
+        <input id="pexelsKey" type="password" placeholder="clé Pexels…" autocomplete="off">
+      </div>
+
+      <hr class="dash-sep">
+
+      <h3>🏨 CLÉ MAKCORPS — <small style="font-family:'Caveat',cursive;color:var(--muted);font-size:15px;">prix d'hôtels en temps réel (optionnel, sinon estimation IA)</small></h3>
+      <div class="key-row">
+        <input id="makcorpsKey" type="password" placeholder="clé Makcorps (laisse vide pour l'estimation IA)…" autocomplete="off">
+      </div>
+
+      <div class="checkbox-row" style="margin-top:14px;">
+        <input type="checkbox" id="rememberKey" checked>
+        <label for="rememberKey" style="font-family:'Caveat',cursive;letter-spacing:0;font-size:16px;">mémoriser les clés dans ce navigateur (stockage local uniquement)</label>
+      </div>
+      <div style="font-family:'Caveat',cursive;color:var(--muted);font-size:14px;margin-top:6px;">
+        ↳ Open-Meteo reste libre &amp; public (geocoding + archive météo — aucune clé requise)
+      </div>
+    </div>
+  </details>
+
+  <footer>
+    ✦ Papier + cyan + une pincée d'IA · Projet scolaire · Données 2026-2076 ✦
+  </footer>
+
+</div>
+
+<!-- DATA (inlined) -->
+<script>
+const HOLIDAYS = [{"date": "2026-01-01", "nom": "Jour de l'An"}, {"date": "2026-04-06", "nom": "Lundi de Pâques"}, {"date": "2026-05-01", "nom": "Fête du Travail"}, {"date": "2026-05-08", "nom": "Victoire 1945"}, {"date": "2026-05-14", "nom": "Jeudi de l'Ascension"}, {"date": "2026-05-25", "nom": "Lundi de Pentecôte"}, {"date": "2026-07-14", "nom": "Fête nationale"}, {"date": "2026-08-15", "nom": "Assomption"}, {"date": "2026-11-01", "nom": "Toussaint"}, {"date": "2026-11-11", "nom": "Armistice 1918"}, {"date": "2026-12-25", "nom": "Noël"}, {"date": "2027-01-01", "nom": "Jour de l'An"}, {"date": "2027-03-29", "nom": "Lundi de Pâques"}, {"date": "2027-05-01", "nom": "Fête du Travail"}, {"date": "2027-05-06", "nom": "Jeudi de l'Ascension"}, {"date": "2027-05-08", "nom": "Victoire 1945"}, {"date": "2027-05-17", "nom": "Lundi de Pentecôte"}, {"date": "2027-07-14", "nom": "Fête nationale"}, {"date": "2027-08-15", "nom": "Assomption"}, {"date": "2027-11-01", "nom": "Toussaint"}, {"date": "2027-11-11", "nom": "Armistice 1918"}, {"date": "2027-12-25", "nom": "Noël"}, {"date": "2028-01-01", "nom": "Jour de l'An"}, {"date": "2028-04-17", "nom": "Lundi de Pâques"}, {"date": "2028-05-01", "nom": "Fête du Travail"}, {"date": "2028-05-08", "nom": "Victoire 1945"}, {"date": "2028-05-25", "nom": "Jeudi de l'Ascension"}, {"date": "2028-06-05", "nom": "Lundi de Pentecôte"}, {"date": "2028-07-14", "nom": "Fête nationale"}, {"date": "2028-08-15", "nom": "Assomption"}, {"date": "2028-11-01", "nom": "Toussaint"}, {"date": "2028-11-11", "nom": "Armistice 1918"}, {"date": "2028-12-25", "nom": "Noël"}, {"date": "2029-01-01", "nom": "Jour de l'An"}, {"date": "2029-04-02", "nom": "Lundi de Pâques"}, {"date": "2029-05-01", "nom": "Fête du Travail"}, {"date": "2029-05-08", "nom": "Victoire 1945"}, {"date": "2029-05-10", "nom": "Jeudi de l'Ascension"}, {"date": "2029-05-21", "nom": "Lundi de Pentecôte"}, {"date": "2029-07-14", "nom": "Fête nationale"}, {"date": "2029-08-15", "nom": "Assomption"}, {"date": "2029-11-01", "nom": "Toussaint"}, {"date": "2029-11-11", "nom": "Armistice 1918"}, {"date": "2029-12-25", "nom": "Noël"}, {"date": "2030-01-01", "nom": "Jour de l'An"}, {"date": "2030-04-22", "nom": "Lundi de Pâques"}, {"date": "2030-05-01", "nom": "Fête du Travail"}, {"date": "2030-05-08", "nom": "Victoire 1945"}, {"date": "2030-05-30", "nom": "Jeudi de l'Ascension"}, {"date": "2030-06-10", "nom": "Lundi de Pentecôte"}, {"date": "2030-07-14", "nom": "Fête nationale"}, {"date": "2030-08-15", "nom": "Assomption"}, {"date": "2030-11-01", "nom": "Toussaint"}, {"date": "2030-11-11", "nom": "Armistice 1918"}, {"date": "2030-12-25", "nom": "Noël"}, {"date": "2031-01-01", "nom": "Jour de l'An"}, {"date": "2031-04-14", "nom": "Lundi de Pâques"}, {"date": "2031-05-01", "nom": "Fête du Travail"}, {"date": "2031-05-08", "nom": "Victoire 1945"}, {"date": "2031-05-22", "nom": "Jeudi de l'Ascension"}, {"date": "2031-06-02", "nom": "Lundi de Pentecôte"}, {"date": "2031-07-14", "nom": "Fête nationale"}, {"date": "2031-08-15", "nom": "Assomption"}, {"date": "2031-11-01", "nom": "Toussaint"}, {"date": "2031-11-11", "nom": "Armistice 1918"}, {"date": "2031-12-25", "nom": "Noël"}, {"date": "2032-01-01", "nom": "Jour de l'An"}, {"date": "2032-03-29", "nom": "Lundi de Pâques"}, {"date": "2032-05-01", "nom": "Fête du Travail"}, {"date": "2032-05-06", "nom": "Jeudi de l'Ascension"}, {"date": "2032-05-08", "nom": "Victoire 1945"}, {"date": "2032-05-17", "nom": "Lundi de Pentecôte"}, {"date": "2032-07-14", "nom": "Fête nationale"}, {"date": "2032-08-15", "nom": "Assomption"}, {"date": "2032-11-01", "nom": "Toussaint"}, {"date": "2032-11-11", "nom": "Armistice 1918"}, {"date": "2032-12-25", "nom": "Noël"}, {"date": "2033-01-01", "nom": "Jour de l'An"}, {"date": "2033-04-18", "nom": "Lundi de Pâques"}, {"date": "2033-05-01", "nom": "Fête du Travail"}, {"date": "2033-05-08", "nom": "Victoire 1945"}, {"date": "2033-05-26", "nom": "Jeudi de l'Ascension"}, {"date": "2033-06-06", "nom": "Lundi de Pentecôte"}, {"date": "2033-07-14", "nom": "Fête nationale"}, {"date": "2033-08-15", "nom": "Assomption"}, {"date": "2033-11-01", "nom": "Toussaint"}, {"date": "2033-11-11", "nom": "Armistice 1918"}, {"date": "2033-12-25", "nom": "Noël"}, {"date": "2034-01-01", "nom": "Jour de l'An"}, {"date": "2034-04-10", "nom": "Lundi de Pâques"}, {"date": "2034-05-01", "nom": "Fête du Travail"}, {"date": "2034-05-08", "nom": "Victoire 1945"}, {"date": "2034-05-18", "nom": "Jeudi de l'Ascension"}, {"date": "2034-05-29", "nom": "Lundi de Pentecôte"}, {"date": "2034-07-14", "nom": "Fête nationale"}, {"date": "2034-08-15", "nom": "Assomption"}, {"date": "2034-11-01", "nom": "Toussaint"}, {"date": "2034-11-11", "nom": "Armistice 1918"}, {"date": "2034-12-25", "nom": "Noël"}, {"date": "2035-01-01", "nom": "Jour de l'An"}, {"date": "2035-03-26", "nom": "Lundi de Pâques"}, {"date": "2035-05-01", "nom": "Fête du Travail"}, {"date": "2035-05-03", "nom": "Jeudi de l'Ascension"}, {"date": "2035-05-08", "nom": "Victoire 1945"}, {"date": "2035-05-14", "nom": "Lundi de Pentecôte"}, {"date": "2035-07-14", "nom": "Fête nationale"}, {"date": "2035-08-15", "nom": "Assomption"}, {"date": "2035-11-01", "nom": "Toussaint"}, {"date": "2035-11-11", "nom": "Armistice 1918"}, {"date": "2035-12-25", "nom": "Noël"}, {"date": "2036-01-01", "nom": "Jour de l'An"}, {"date": "2036-04-14", "nom": "Lundi de Pâques"}, {"date": "2036-05-01", "nom": "Fête du Travail"}, {"date": "2036-05-08", "nom": "Victoire 1945"}, {"date": "2036-05-22", "nom": "Jeudi de l'Ascension"}, {"date": "2036-06-02", "nom": "Lundi de Pentecôte"}, {"date": "2036-07-14", "nom": "Fête nationale"}, {"date": "2036-08-15", "nom": "Assomption"}, {"date": "2036-11-01", "nom": "Toussaint"}, {"date": "2036-11-11", "nom": "Armistice 1918"}, {"date": "2036-12-25", "nom": "Noël"}, {"date": "2037-01-01", "nom": "Jour de l'An"}, {"date": "2037-04-06", "nom": "Lundi de Pâques"}, {"date": "2037-05-01", "nom": "Fête du Travail"}, {"date": "2037-05-08", "nom": "Victoire 1945"}, {"date": "2037-05-14", "nom": "Jeudi de l'Ascension"}, {"date": "2037-05-25", "nom": "Lundi de Pentecôte"}, {"date": "2037-07-14", "nom": "Fête nationale"}, {"date": "2037-08-15", "nom": "Assomption"}, {"date": "2037-11-01", "nom": "Toussaint"}, {"date": "2037-11-11", "nom": "Armistice 1918"}, {"date": "2037-12-25", "nom": "Noël"}, {"date": "2038-01-01", "nom": "Jour de l'An"}, {"date": "2038-04-26", "nom": "Lundi de Pâques"}, {"date": "2038-05-01", "nom": "Fête du Travail"}, {"date": "2038-05-08", "nom": "Victoire 1945"}, {"date": "2038-06-03", "nom": "Jeudi de l'Ascension"}, {"date": "2038-06-14", "nom": "Lundi de Pentecôte"}, {"date": "2038-07-14", "nom": "Fête nationale"}, {"date": "2038-08-15", "nom": "Assomption"}, {"date": "2038-11-01", "nom": "Toussaint"}, {"date": "2038-11-11", "nom": "Armistice 1918"}, {"date": "2038-12-25", "nom": "Noël"}, {"date": "2039-01-01", "nom": "Jour de l'An"}, {"date": "2039-04-11", "nom": "Lundi de Pâques"}, {"date": "2039-05-01", "nom": "Fête du Travail"}, {"date": "2039-05-08", "nom": "Victoire 1945"}, {"date": "2039-05-19", "nom": "Jeudi de l'Ascension"}, {"date": "2039-05-30", "nom": "Lundi de Pentecôte"}, {"date": "2039-07-14", "nom": "Fête nationale"}, {"date": "2039-08-15", "nom": "Assomption"}, {"date": "2039-11-01", "nom": "Toussaint"}, {"date": "2039-11-11", "nom": "Armistice 1918"}, {"date": "2039-12-25", "nom": "Noël"}, {"date": "2040-01-01", "nom": "Jour de l'An"}, {"date": "2040-04-02", "nom": "Lundi de Pâques"}, {"date": "2040-05-01", "nom": "Fête du Travail"}, {"date": "2040-05-08", "nom": "Victoire 1945"}, {"date": "2040-05-10", "nom": "Jeudi de l'Ascension"}, {"date": "2040-05-21", "nom": "Lundi de Pentecôte"}, {"date": "2040-07-14", "nom": "Fête nationale"}, {"date": "2040-08-15", "nom": "Assomption"}, {"date": "2040-11-01", "nom": "Toussaint"}, {"date": "2040-11-11", "nom": "Armistice 1918"}, {"date": "2040-12-25", "nom": "Noël"}, {"date": "2041-01-01", "nom": "Jour de l'An"}, {"date": "2041-04-22", "nom": "Lundi de Pâques"}, {"date": "2041-05-01", "nom": "Fête du Travail"}, {"date": "2041-05-08", "nom": "Victoire 1945"}, {"date": "2041-05-30", "nom": "Jeudi de l'Ascension"}, {"date": "2041-06-10", "nom": "Lundi de Pentecôte"}, {"date": "2041-07-14", "nom": "Fête nationale"}, {"date": "2041-08-15", "nom": "Assomption"}, {"date": "2041-11-01", "nom": "Toussaint"}, {"date": "2041-11-11", "nom": "Armistice 1918"}, {"date": "2041-12-25", "nom": "Noël"}, {"date": "2042-01-01", "nom": "Jour de l'An"}, {"date": "2042-04-07", "nom": "Lundi de Pâques"}, {"date": "2042-05-01", "nom": "Fête du Travail"}, {"date": "2042-05-08", "nom": "Victoire 1945"}, {"date": "2042-05-15", "nom": "Jeudi de l'Ascension"}, {"date": "2042-05-26", "nom": "Lundi de Pentecôte"}, {"date": "2042-07-14", "nom": "Fête nationale"}, {"date": "2042-08-15", "nom": "Assomption"}, {"date": "2042-11-01", "nom": "Toussaint"}, {"date": "2042-11-11", "nom": "Armistice 1918"}, {"date": "2042-12-25", "nom": "Noël"}, {"date": "2043-01-01", "nom": "Jour de l'An"}, {"date": "2043-03-30", "nom": "Lundi de Pâques"}, {"date": "2043-05-01", "nom": "Fête du Travail"}, {"date": "2043-05-07", "nom": "Jeudi de l'Ascension"}, {"date": "2043-05-08", "nom": "Victoire 1945"}, {"date": "2043-05-18", "nom": "Lundi de Pentecôte"}, {"date": "2043-07-14", "nom": "Fête nationale"}, {"date": "2043-08-15", "nom": "Assomption"}, {"date": "2043-11-01", "nom": "Toussaint"}, {"date": "2043-11-11", "nom": "Armistice 1918"}, {"date": "2043-12-25", "nom": "Noël"}, {"date": "2044-01-01", "nom": "Jour de l'An"}, {"date": "2044-04-18", "nom": "Lundi de Pâques"}, {"date": "2044-05-01", "nom": "Fête du Travail"}, {"date": "2044-05-08", "nom": "Victoire 1945"}, {"date": "2044-05-26", "nom": "Jeudi de l'Ascension"}, {"date": "2044-06-06", "nom": "Lundi de Pentecôte"}, {"date": "2044-07-14", "nom": "Fête nationale"}, {"date": "2044-08-15", "nom": "Assomption"}, {"date": "2044-11-01", "nom": "Toussaint"}, {"date": "2044-11-11", "nom": "Armistice 1918"}, {"date": "2044-12-25", "nom": "Noël"}, {"date": "2045-01-01", "nom": "Jour de l'An"}, {"date": "2045-04-10", "nom": "Lundi de Pâques"}, {"date": "2045-05-01", "nom": "Fête du Travail"}, {"date": "2045-05-08", "nom": "Victoire 1945"}, {"date": "2045-05-18", "nom": "Jeudi de l'Ascension"}, {"date": "2045-05-29", "nom": "Lundi de Pentecôte"}, {"date": "2045-07-14", "nom": "Fête nationale"}, {"date": "2045-08-15", "nom": "Assomption"}, {"date": "2045-11-01", "nom": "Toussaint"}, {"date": "2045-11-11", "nom": "Armistice 1918"}, {"date": "2045-12-25", "nom": "Noël"}, {"date": "2046-01-01", "nom": "Jour de l'An"}, {"date": "2046-03-26", "nom": "Lundi de Pâques"}, {"date": "2046-05-01", "nom": "Fête du Travail"}, {"date": "2046-05-03", "nom": "Jeudi de l'Ascension"}, {"date": "2046-05-08", "nom": "Victoire 1945"}, {"date": "2046-05-14", "nom": "Lundi de Pentecôte"}, {"date": "2046-07-14", "nom": "Fête nationale"}, {"date": "2046-08-15", "nom": "Assomption"}, {"date": "2046-11-01", "nom": "Toussaint"}, {"date": "2046-11-11", "nom": "Armistice 1918"}, {"date": "2046-12-25", "nom": "Noël"}, {"date": "2047-01-01", "nom": "Jour de l'An"}, {"date": "2047-04-15", "nom": "Lundi de Pâques"}, {"date": "2047-05-01", "nom": "Fête du Travail"}, {"date": "2047-05-08", "nom": "Victoire 1945"}, {"date": "2047-05-23", "nom": "Jeudi de l'Ascension"}, {"date": "2047-06-03", "nom": "Lundi de Pentecôte"}, {"date": "2047-07-14", "nom": "Fête nationale"}, {"date": "2047-08-15", "nom": "Assomption"}, {"date": "2047-11-01", "nom": "Toussaint"}, {"date": "2047-11-11", "nom": "Armistice 1918"}, {"date": "2047-12-25", "nom": "Noël"}, {"date": "2048-01-01", "nom": "Jour de l'An"}, {"date": "2048-04-06", "nom": "Lundi de Pâques"}, {"date": "2048-05-01", "nom": "Fête du Travail"}, {"date": "2048-05-08", "nom": "Victoire 1945"}, {"date": "2048-05-14", "nom": "Jeudi de l'Ascension"}, {"date": "2048-05-25", "nom": "Lundi de Pentecôte"}, {"date": "2048-07-14", "nom": "Fête nationale"}, {"date": "2048-08-15", "nom": "Assomption"}, {"date": "2048-11-01", "nom": "Toussaint"}, {"date": "2048-11-11", "nom": "Armistice 1918"}, {"date": "2048-12-25", "nom": "Noël"}, {"date": "2049-01-01", "nom": "Jour de l'An"}, {"date": "2049-04-19", "nom": "Lundi de Pâques"}, {"date": "2049-05-01", "nom": "Fête du Travail"}, {"date": "2049-05-08", "nom": "Victoire 1945"}, {"date": "2049-05-27", "nom": "Jeudi de l'Ascension"}, {"date": "2049-06-07", "nom": "Lundi de Pentecôte"}, {"date": "2049-07-14", "nom": "Fête nationale"}, {"date": "2049-08-15", "nom": "Assomption"}, {"date": "2049-11-01", "nom": "Toussaint"}, {"date": "2049-11-11", "nom": "Armistice 1918"}, {"date": "2049-12-25", "nom": "Noël"}, {"date": "2050-01-01", "nom": "Jour de l'An"}, {"date": "2050-04-11", "nom": "Lundi de Pâques"}, {"date": "2050-05-01", "nom": "Fête du Travail"}, {"date": "2050-05-08", "nom": "Victoire 1945"}, {"date": "2050-05-19", "nom": "Jeudi de l'Ascension"}, {"date": "2050-05-30", "nom": "Lundi de Pentecôte"}, {"date": "2050-07-14", "nom": "Fête nationale"}, {"date": "2050-08-15", "nom": "Assomption"}, {"date": "2050-11-01", "nom": "Toussaint"}, {"date": "2050-11-11", "nom": "Armistice 1918"}, {"date": "2050-12-25", "nom": "Noël"}, {"date": "2051-01-01", "nom": "Jour de l'An"}, {"date": "2051-04-03", "nom": "Lundi de Pâques"}, {"date": "2051-05-01", "nom": "Fête du Travail"}, {"date": "2051-05-08", "nom": "Victoire 1945"}, {"date": "2051-05-11", "nom": "Jeudi de l'Ascension"}, {"date": "2051-05-22", "nom": "Lundi de Pentecôte"}, {"date": "2051-07-14", "nom": "Fête nationale"}, {"date": "2051-08-15", "nom": "Assomption"}, {"date": "2051-11-01", "nom": "Toussaint"}, {"date": "2051-11-11", "nom": "Armistice 1918"}, {"date": "2051-12-25", "nom": "Noël"}, {"date": "2052-01-01", "nom": "Jour de l'An"}, {"date": "2052-04-22", "nom": "Lundi de Pâques"}, {"date": "2052-05-01", "nom": "Fête du Travail"}, {"date": "2052-05-08", "nom": "Victoire 1945"}, {"date": "2052-05-30", "nom": "Jeudi de l'Ascension"}, {"date": "2052-06-10", "nom": "Lundi de Pentecôte"}, {"date": "2052-07-14", "nom": "Fête nationale"}, {"date": "2052-08-15", "nom": "Assomption"}, {"date": "2052-11-01", "nom": "Toussaint"}, {"date": "2052-11-11", "nom": "Armistice 1918"}, {"date": "2052-12-25", "nom": "Noël"}, {"date": "2053-01-01", "nom": "Jour de l'An"}, {"date": "2053-04-07", "nom": "Lundi de Pâques"}, {"date": "2053-05-01", "nom": "Fête du Travail"}, {"date": "2053-05-08", "nom": "Victoire 1945"}, {"date": "2053-05-15", "nom": "Jeudi de l'Ascension"}, {"date": "2053-05-26", "nom": "Lundi de Pentecôte"}, {"date": "2053-07-14", "nom": "Fête nationale"}, {"date": "2053-08-15", "nom": "Assomption"}, {"date": "2053-11-01", "nom": "Toussaint"}, {"date": "2053-11-11", "nom": "Armistice 1918"}, {"date": "2053-12-25", "nom": "Noël"}, {"date": "2054-01-01", "nom": "Jour de l'An"}, {"date": "2054-03-30", "nom": "Lundi de Pâques"}, {"date": "2054-05-01", "nom": "Fête du Travail"}, {"date": "2054-05-07", "nom": "Jeudi de l'Ascension"}, {"date": "2054-05-08", "nom": "Victoire 1945"}, {"date": "2054-05-18", "nom": "Lundi de Pentecôte"}, {"date": "2054-07-14", "nom": "Fête nationale"}, {"date": "2054-08-15", "nom": "Assomption"}, {"date": "2054-11-01", "nom": "Toussaint"}, {"date": "2054-11-11", "nom": "Armistice 1918"}, {"date": "2054-12-25", "nom": "Noël"}, {"date": "2055-01-01", "nom": "Jour de l'An"}, {"date": "2055-04-19", "nom": "Lundi de Pâques"}, {"date": "2055-05-01", "nom": "Fête du Travail"}, {"date": "2055-05-08", "nom": "Victoire 1945"}, {"date": "2055-05-27", "nom": "Jeudi de l'Ascension"}, {"date": "2055-06-07", "nom": "Lundi de Pentecôte"}, {"date": "2055-07-14", "nom": "Fête nationale"}, {"date": "2055-08-15", "nom": "Assomption"}, {"date": "2055-11-01", "nom": "Toussaint"}, {"date": "2055-11-11", "nom": "Armistice 1918"}, {"date": "2055-12-25", "nom": "Noël"}, {"date": "2056-01-01", "nom": "Jour de l'An"}, {"date": "2056-04-03", "nom": "Lundi de Pâques"}, {"date": "2056-05-01", "nom": "Fête du Travail"}, {"date": "2056-05-08", "nom": "Victoire 1945"}, {"date": "2056-05-11", "nom": "Jeudi de l'Ascension"}, {"date": "2056-05-22", "nom": "Lundi de Pentecôte"}, {"date": "2056-07-14", "nom": "Fête nationale"}, {"date": "2056-08-15", "nom": "Assomption"}, {"date": "2056-11-01", "nom": "Toussaint"}, {"date": "2056-11-11", "nom": "Armistice 1918"}, {"date": "2056-12-25", "nom": "Noël"}, {"date": "2057-01-01", "nom": "Jour de l'An"}, {"date": "2057-04-23", "nom": "Lundi de Pâques"}, {"date": "2057-05-01", "nom": "Fête du Travail"}, {"date": "2057-05-08", "nom": "Victoire 1945"}, {"date": "2057-05-31", "nom": "Jeudi de l'Ascension"}, {"date": "2057-06-11", "nom": "Lundi de Pentecôte"}, {"date": "2057-07-14", "nom": "Fête nationale"}, {"date": "2057-08-15", "nom": "Assomption"}, {"date": "2057-11-01", "nom": "Toussaint"}, {"date": "2057-11-11", "nom": "Armistice 1918"}, {"date": "2057-12-25", "nom": "Noël"}, {"date": "2058-01-01", "nom": "Jour de l'An"}, {"date": "2058-04-15", "nom": "Lundi de Pâques"}, {"date": "2058-05-01", "nom": "Fête du Travail"}, {"date": "2058-05-08", "nom": "Victoire 1945"}, {"date": "2058-05-23", "nom": "Jeudi de l'Ascension"}, {"date": "2058-06-03", "nom": "Lundi de Pentecôte"}, {"date": "2058-07-14", "nom": "Fête nationale"}, {"date": "2058-08-15", "nom": "Assomption"}, {"date": "2058-11-01", "nom": "Toussaint"}, {"date": "2058-11-11", "nom": "Armistice 1918"}, {"date": "2058-12-25", "nom": "Noël"}, {"date": "2059-01-01", "nom": "Jour de l'An"}, {"date": "2059-03-31", "nom": "Lundi de Pâques"}, {"date": "2059-05-01", "nom": "Fête du Travail"}, {"date": "2059-05-08", "nom": "Jeudi de l'Ascension"}, {"date": "2059-05-08", "nom": "Victoire 1945"}, {"date": "2059-05-19", "nom": "Lundi de Pentecôte"}, {"date": "2059-07-14", "nom": "Fête nationale"}, {"date": "2059-08-15", "nom": "Assomption"}, {"date": "2059-11-01", "nom": "Toussaint"}, {"date": "2059-11-11", "nom": "Armistice 1918"}, {"date": "2059-12-25", "nom": "Noël"}, {"date": "2060-01-01", "nom": "Jour de l'An"}, {"date": "2060-04-19", "nom": "Lundi de Pâques"}, {"date": "2060-05-01", "nom": "Fête du Travail"}, {"date": "2060-05-08", "nom": "Victoire 1945"}, {"date": "2060-05-27", "nom": "Jeudi de l'Ascension"}, {"date": "2060-06-07", "nom": "Lundi de Pentecôte"}, {"date": "2060-07-14", "nom": "Fête nationale"}, {"date": "2060-08-15", "nom": "Assomption"}, {"date": "2060-11-01", "nom": "Toussaint"}, {"date": "2060-11-11", "nom": "Armistice 1918"}, {"date": "2060-12-25", "nom": "Noël"}, {"date": "2061-01-01", "nom": "Jour de l'An"}, {"date": "2061-04-11", "nom": "Lundi de Pâques"}, {"date": "2061-05-01", "nom": "Fête du Travail"}, {"date": "2061-05-08", "nom": "Victoire 1945"}, {"date": "2061-05-19", "nom": "Jeudi de l'Ascension"}, {"date": "2061-05-30", "nom": "Lundi de Pentecôte"}, {"date": "2061-07-14", "nom": "Fête nationale"}, {"date": "2061-08-15", "nom": "Assomption"}, {"date": "2061-11-01", "nom": "Toussaint"}, {"date": "2061-11-11", "nom": "Armistice 1918"}, {"date": "2061-12-25", "nom": "Noël"}, {"date": "2062-01-01", "nom": "Jour de l'An"}, {"date": "2062-03-27", "nom": "Lundi de Pâques"}, {"date": "2062-05-01", "nom": "Fête du Travail"}, {"date": "2062-05-04", "nom": "Jeudi de l'Ascension"}, {"date": "2062-05-08", "nom": "Victoire 1945"}, {"date": "2062-05-15", "nom": "Lundi de Pentecôte"}, {"date": "2062-07-14", "nom": "Fête nationale"}, {"date": "2062-08-15", "nom": "Assomption"}, {"date": "2062-11-01", "nom": "Toussaint"}, {"date": "2062-11-11", "nom": "Armistice 1918"}, {"date": "2062-12-25", "nom": "Noël"}, {"date": "2063-01-01", "nom": "Jour de l'An"}, {"date": "2063-04-16", "nom": "Lundi de Pâques"}, {"date": "2063-05-01", "nom": "Fête du Travail"}, {"date": "2063-05-08", "nom": "Victoire 1945"}, {"date": "2063-05-24", "nom": "Jeudi de l'Ascension"}, {"date": "2063-06-04", "nom": "Lundi de Pentecôte"}, {"date": "2063-07-14", "nom": "Fête nationale"}, {"date": "2063-08-15", "nom": "Assomption"}, {"date": "2063-11-01", "nom": "Toussaint"}, {"date": "2063-11-11", "nom": "Armistice 1918"}, {"date": "2063-12-25", "nom": "Noël"}, {"date": "2064-01-01", "nom": "Jour de l'An"}, {"date": "2064-04-07", "nom": "Lundi de Pâques"}, {"date": "2064-05-01", "nom": "Fête du Travail"}, {"date": "2064-05-08", "nom": "Victoire 1945"}, {"date": "2064-05-15", "nom": "Jeudi de l'Ascension"}, {"date": "2064-05-26", "nom": "Lundi de Pentecôte"}, {"date": "2064-07-14", "nom": "Fête nationale"}, {"date": "2064-08-15", "nom": "Assomption"}, {"date": "2064-11-01", "nom": "Toussaint"}, {"date": "2064-11-11", "nom": "Armistice 1918"}, {"date": "2064-12-25", "nom": "Noël"}, {"date": "2065-01-01", "nom": "Jour de l'An"}, {"date": "2065-03-30", "nom": "Lundi de Pâques"}, {"date": "2065-05-01", "nom": "Fête du Travail"}, {"date": "2065-05-07", "nom": "Jeudi de l'Ascension"}, {"date": "2065-05-08", "nom": "Victoire 1945"}, {"date": "2065-05-18", "nom": "Lundi de Pentecôte"}, {"date": "2065-07-14", "nom": "Fête nationale"}, {"date": "2065-08-15", "nom": "Assomption"}, {"date": "2065-11-01", "nom": "Toussaint"}, {"date": "2065-11-11", "nom": "Armistice 1918"}, {"date": "2065-12-25", "nom": "Noël"}, {"date": "2066-01-01", "nom": "Jour de l'An"}, {"date": "2066-04-12", "nom": "Lundi de Pâques"}, {"date": "2066-05-01", "nom": "Fête du Travail"}, {"date": "2066-05-08", "nom": "Victoire 1945"}, {"date": "2066-05-20", "nom": "Jeudi de l'Ascension"}, {"date": "2066-05-31", "nom": "Lundi de Pentecôte"}, {"date": "2066-07-14", "nom": "Fête nationale"}, {"date": "2066-08-15", "nom": "Assomption"}, {"date": "2066-11-01", "nom": "Toussaint"}, {"date": "2066-11-11", "nom": "Armistice 1918"}, {"date": "2066-12-25", "nom": "Noël"}, {"date": "2067-01-01", "nom": "Jour de l'An"}, {"date": "2067-04-04", "nom": "Lundi de Pâques"}, {"date": "2067-05-01", "nom": "Fête du Travail"}, {"date": "2067-05-08", "nom": "Victoire 1945"}, {"date": "2067-05-12", "nom": "Jeudi de l'Ascension"}, {"date": "2067-05-23", "nom": "Lundi de Pentecôte"}, {"date": "2067-07-14", "nom": "Fête nationale"}, {"date": "2067-08-15", "nom": "Assomption"}, {"date": "2067-11-01", "nom": "Toussaint"}, {"date": "2067-11-11", "nom": "Armistice 1918"}, {"date": "2067-12-25", "nom": "Noël"}, {"date": "2068-01-01", "nom": "Jour de l'An"}, {"date": "2068-04-23", "nom": "Lundi de Pâques"}, {"date": "2068-05-01", "nom": "Fête du Travail"}, {"date": "2068-05-08", "nom": "Victoire 1945"}, {"date": "2068-05-31", "nom": "Jeudi de l'Ascension"}, {"date": "2068-06-11", "nom": "Lundi de Pentecôte"}, {"date": "2068-07-14", "nom": "Fête nationale"}, {"date": "2068-08-15", "nom": "Assomption"}, {"date": "2068-11-01", "nom": "Toussaint"}, {"date": "2068-11-11", "nom": "Armistice 1918"}, {"date": "2068-12-25", "nom": "Noël"}, {"date": "2069-01-01", "nom": "Jour de l'An"}, {"date": "2069-04-15", "nom": "Lundi de Pâques"}, {"date": "2069-05-01", "nom": "Fête du Travail"}, {"date": "2069-05-08", "nom": "Victoire 1945"}, {"date": "2069-05-23", "nom": "Jeudi de l'Ascension"}, {"date": "2069-06-03", "nom": "Lundi de Pentecôte"}, {"date": "2069-07-14", "nom": "Fête nationale"}, {"date": "2069-08-15", "nom": "Assomption"}, {"date": "2069-11-01", "nom": "Toussaint"}, {"date": "2069-11-11", "nom": "Armistice 1918"}, {"date": "2069-12-25", "nom": "Noël"}, {"date": "2070-01-01", "nom": "Jour de l'An"}, {"date": "2070-03-31", "nom": "Lundi de Pâques"}, {"date": "2070-05-01", "nom": "Fête du Travail"}, {"date": "2070-05-08", "nom": "Jeudi de l'Ascension"}, {"date": "2070-05-08", "nom": "Victoire 1945"}, {"date": "2070-05-19", "nom": "Lundi de Pentecôte"}, {"date": "2070-07-14", "nom": "Fête nationale"}, {"date": "2070-08-15", "nom": "Assomption"}, {"date": "2070-11-01", "nom": "Toussaint"}, {"date": "2070-11-11", "nom": "Armistice 1918"}, {"date": "2070-12-25", "nom": "Noël"}, {"date": "2071-01-01", "nom": "Jour de l'An"}, {"date": "2071-04-20", "nom": "Lundi de Pâques"}, {"date": "2071-05-01", "nom": "Fête du Travail"}, {"date": "2071-05-08", "nom": "Victoire 1945"}, {"date": "2071-05-28", "nom": "Jeudi de l'Ascension"}, {"date": "2071-06-08", "nom": "Lundi de Pentecôte"}, {"date": "2071-07-14", "nom": "Fête nationale"}, {"date": "2071-08-15", "nom": "Assomption"}, {"date": "2071-11-01", "nom": "Toussaint"}, {"date": "2071-11-11", "nom": "Armistice 1918"}, {"date": "2071-12-25", "nom": "Noël"}, {"date": "2072-01-01", "nom": "Jour de l'An"}, {"date": "2072-04-11", "nom": "Lundi de Pâques"}, {"date": "2072-05-01", "nom": "Fête du Travail"}, {"date": "2072-05-08", "nom": "Victoire 1945"}, {"date": "2072-05-19", "nom": "Jeudi de l'Ascension"}, {"date": "2072-05-30", "nom": "Lundi de Pentecôte"}, {"date": "2072-07-14", "nom": "Fête nationale"}, {"date": "2072-08-15", "nom": "Assomption"}, {"date": "2072-11-01", "nom": "Toussaint"}, {"date": "2072-11-11", "nom": "Armistice 1918"}, {"date": "2072-12-25", "nom": "Noël"}, {"date": "2073-01-01", "nom": "Jour de l'An"}, {"date": "2073-03-27", "nom": "Lundi de Pâques"}, {"date": "2073-05-01", "nom": "Fête du Travail"}, {"date": "2073-05-04", "nom": "Jeudi de l'Ascension"}, {"date": "2073-05-08", "nom": "Victoire 1945"}, {"date": "2073-05-15", "nom": "Lundi de Pentecôte"}, {"date": "2073-07-14", "nom": "Fête nationale"}, {"date": "2073-08-15", "nom": "Assomption"}, {"date": "2073-11-01", "nom": "Toussaint"}, {"date": "2073-11-11", "nom": "Armistice 1918"}, {"date": "2073-12-25", "nom": "Noël"}, {"date": "2074-01-01", "nom": "Jour de l'An"}, {"date": "2074-04-16", "nom": "Lundi de Pâques"}, {"date": "2074-05-01", "nom": "Fête du Travail"}, {"date": "2074-05-08", "nom": "Victoire 1945"}, {"date": "2074-05-24", "nom": "Jeudi de l'Ascension"}, {"date": "2074-06-04", "nom": "Lundi de Pentecôte"}, {"date": "2074-07-14", "nom": "Fête nationale"}, {"date": "2074-08-15", "nom": "Assomption"}, {"date": "2074-11-01", "nom": "Toussaint"}, {"date": "2074-11-11", "nom": "Armistice 1918"}, {"date": "2074-12-25", "nom": "Noël"}, {"date": "2075-01-01", "nom": "Jour de l'An"}, {"date": "2075-04-08", "nom": "Lundi de Pâques"}, {"date": "2075-05-01", "nom": "Fête du Travail"}, {"date": "2075-05-08", "nom": "Victoire 1945"}, {"date": "2075-05-16", "nom": "Jeudi de l'Ascension"}, {"date": "2075-05-27", "nom": "Lundi de Pentecôte"}, {"date": "2075-07-14", "nom": "Fête nationale"}, {"date": "2075-08-15", "nom": "Assomption"}, {"date": "2075-11-01", "nom": "Toussaint"}, {"date": "2075-11-11", "nom": "Armistice 1918"}, {"date": "2075-12-25", "nom": "Noël"}, {"date": "2076-01-01", "nom": "Jour de l'An"}, {"date": "2076-04-20", "nom": "Lundi de Pâques"}, {"date": "2076-05-01", "nom": "Fête du Travail"}, {"date": "2076-05-08", "nom": "Victoire 1945"}, {"date": "2076-05-28", "nom": "Jeudi de l'Ascension"}, {"date": "2076-06-08", "nom": "Lundi de Pentecôte"}, {"date": "2076-07-14", "nom": "Fête nationale"}, {"date": "2076-08-15", "nom": "Assomption"}, {"date": "2076-11-01", "nom": "Toussaint"}, {"date": "2076-11-11", "nom": "Armistice 1918"}, {"date": "2076-12-25", "nom": "Noël"}];
+
+</script>
+
+<!-- APP -->
+<script>
+const $ = (id) => document.getElementById(id);
+const JOUR_FR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+const JOUR_LONG = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+const MOIS_FR = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+
+function toDate(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function fmtDate(d) { return `${d.getDate()} ${MOIS_FR[d.getMonth()]} ${d.getFullYear()}`; }
+function isoDate(d) {
+  const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+
+/* ============ TABS ============ */
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    $('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ============ BRIDGES LOGIC ============ */
+function findBridges(startStr, endStr) {
+  const start = toDate(startStr), end = toDate(endStr);
+  const out = [];
+  for (const h of HOLIDAYS) {
+    const d = toDate(h.date);
+    if (d < start || d > end) continue;
+    const wd = d.getDay();
+    const base = { date: h.date, dateObj: d, nom: h.nom, jour: JOUR_LONG[wd] };
+    if (wd === 1) out.push({...base, type:'Week-end de 3 jours', conges:0, total:3, debut: isoDate(addDays(d,-2)), fin: isoDate(d)});
+    else if (wd === 2) out.push({...base, type:'Pont (lundi posé)', conges:1, total:4, debut: isoDate(addDays(d,-3)), fin: isoDate(d)});
+    else if (wd === 3) {
+      out.push({...base, type:'Mini-pont (avant)',  conges:2, total:5, debut: isoDate(addDays(d,-4)), fin: isoDate(d)});
+      out.push({...base, type:'Mini-pont (après)',  conges:2, total:5, debut: isoDate(d),              fin: isoDate(addDays(d,4))});
+    }
+    else if (wd === 4) out.push({...base, type:'Pont (vendredi posé)', conges:1, total:4, debut: isoDate(d), fin: isoDate(addDays(d,3))});
+    else if (wd === 5) out.push({...base, type:'Week-end de 3 jours',  conges:0, total:3, debut: isoDate(d), fin: isoDate(addDays(d,2))});
+  }
+  out.sort((a,b) => a.dateObj - b.dateObj);
+  return out;
+}
+
+/* ============ OPEN-METEO ============ */
+async function geocode(city) {
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=fr&format=json`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Géocodage impossible (${r.status})`);
+  const j = await r.json();
+  if (!j.results || !j.results.length) throw new Error(`Ville introuvable: ${city}`);
+  const g = j.results[0];
+  return { lat: g.latitude, lon: g.longitude, country: g.country, name: g.name, timezone: g.timezone || 'auto' };
+}
+
+async function fetchYearArchive(lat, lon, start, end, tz) {
+  const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}`
+    + `&start_date=${start}&end_date=${end}`
+    + `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum`
+    + `&timezone=${encodeURIComponent(tz)}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Open-Meteo (${r.status})`);
+  return r.json();
+}
+
+function shiftYear(dateStr, years) {
+  const d = toDate(dateStr);
+  return isoDate(new Date(d.getFullYear() - years, d.getMonth(), d.getDate()));
+}
+
+async function fetchHistoricalWeather(lat, lon, startDate, endDate, tz) {
+  const tasks = [1,2,3].map(y => fetchYearArchive(lat, lon, shiftYear(startDate, y), shiftYear(endDate, y), tz));
+  const results = await Promise.allSettled(tasks);
+  const ok = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+  if (!ok.length) throw new Error('Aucune donnée météo historique disponible.');
+
+  const len = ok[0].daily.time.length;
+  const agg = [];
+  const targetYear = toDate(startDate).getFullYear();
+  for (let i = 0; i < len; i++) {
+    let tMax = 0, tMin = 0, rain = 0, count = 0;
+    for (const j of ok) {
+      if (j.daily.temperature_2m_max[i] != null) {
+        tMax += j.daily.temperature_2m_max[i];
+        tMin += j.daily.temperature_2m_min[i];
+        rain += (j.daily.precipitation_sum[i] || 0);
+        count++;
+      }
+    }
+    if (!count) continue;
+    const srcDate = ok[0].daily.time[i];
+    const [, m, d] = srcDate.split('-').map(Number);
+    const label = new Date(targetYear, m-1, d);
+    agg.push({ date: label, tMax: tMax / count, tMin: tMin / count, rain: rain / count });
+  }
+  return agg;
+}
+
+function weatherIcon(tMax, rain) {
+  if (rain > 5) return '🌧️';
+  if (rain > 1.5) return '🌦️';
+  if (tMax >= 27) return '☀️';
+  if (tMax >= 20) return '🌤️';
+  if (tMax >= 10) return '⛅';
+  if (tMax >= 2)  return '🌥️';
+  return '❄️';
+}
+
+/* ============ PEXELS (photos) ============ */
+async function fetchPexelsPhotos(query, count=6) {
+  const key = $('pexelsKey').value.trim();
+  if (!key) return [];
+  const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${count}&orientation=landscape`;
+  const r = await fetch(url, { headers: { 'Authorization': key } });
+  if (!r.ok) throw new Error(`Pexels ${r.status}`);
+  const j = await r.json();
+  return (j.photos || []).map(p => ({
+    small: p.src?.medium || p.src?.small,
+    large: p.src?.large || p.src?.original,
+    photographer: p.photographer || '—',
+    pageUrl: p.url || '',
+    alt: p.alt || query,
+  }));
+}
+
+/* ============ MAKCORPS (hôtels) ============ */
+async function fetchMakcorpsPrices(city, checkin, checkout) {
+  const key = $('makcorpsKey').value.trim();
+  if (!key) return null;
+  // 1) City mapping
+  const mapUrl = `https://api.makcorps.com/mapping?api_key=${encodeURIComponent(key)}&name=${encodeURIComponent(city)}`;
+  const mapR = await fetch(mapUrl);
+  if (!mapR.ok) throw new Error(`Makcorps mapping ${mapR.status}`);
+  const mapJ = await mapR.json();
+  const entry = Array.isArray(mapJ) ? mapJ[0] : (mapJ.city ? mapJ.city[0] : null);
+  const cityId = entry?.document_id || entry?.city_id || entry?.id;
+  if (!cityId) throw new Error('Makcorps : ville introuvable');
+  // 2) Hotels lookup
+  const hotelUrl = `https://api.makcorps.com/city?cityid=${cityId}&pagination=0&cur=EUR&rooms=1&adults=2&checkin=${checkin}&checkout=${checkout}&api_key=${encodeURIComponent(key)}`;
+  const hR = await fetch(hotelUrl);
+  if (!hR.ok) throw new Error(`Makcorps city ${hR.status}`);
+  return hR.json();
+}
+
+/* ============ OPENAI ============ */
+async function callOpenAI({key, model, system, user, jsonMode=false}) {
+  const body = {
+    model,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: user },
+    ],
+    temperature: 0.7,
+  };
+  if (jsonMode) body.response_format = { type: 'json_object' };
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    let msg = `OpenAI error (${r.status})`;
+    try { const j = await r.json(); if (j.error?.message) msg = j.error.message; } catch(e){}
+    throw new Error(msg);
+  }
+  const j = await r.json();
+  return j.choices[0].message.content;
+}
+
+/* ============ MARKDOWN léger ============ */
+function mdToHtml(md) {
+  if (!md) return '';
+  let h = md.trim();
+  h = h.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  h = h.replace(/^### (.*)$/gm, '<h3>$1</h3>');
+  h = h.replace(/^## (.*)$/gm,  '<h3>$1</h3>');
+  h = h.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/(^|[\s\(])_([^_]+)_/g, '$1<em>$2</em>');
+  const lines = h.split(/\n/);
+  let out = [], inList = false;
+  for (const line of lines) {
+    if (/^\s*[-*]\s+/.test(line)) {
+      if (inList !== 'ul') { if (inList) out.push(inList === 'ol' ? '</ol>' : '</ul>'); out.push('<ul>'); inList = 'ul'; }
+      out.push('<li>' + line.replace(/^\s*[-*]\s+/, '') + '</li>');
+    } else if (/^\s*\d+\.\s+/.test(line)) {
+      if (inList !== 'ol') { if (inList) out.push(inList === 'ul' ? '</ul>' : '</ol>'); out.push('<ol>'); inList = 'ol'; }
+      out.push('<li>' + line.replace(/^\s*\d+\.\s+/, '') + '</li>');
+    } else {
+      if (inList) { out.push(inList === 'ol' ? '</ol>' : '</ul>'); inList = false; }
+      if (line.trim() === '') out.push('');
+      else if (!/^<h\d/.test(line)) out.push('<p>' + line + '</p>');
+      else out.push(line);
+    }
+  }
+  if (inList) out.push(inList === 'ol' ? '</ol>' : '</ul>');
+  return out.join('\n');
+}
+
+/* ============ HELPERS UI ============ */
+function showError(id, msg) { $(id).innerHTML = `<div class="error"><strong>Oups : </strong>${msg}</div>`; }
+function clearError(id) { $(id).innerHTML = ''; }
+function setLoading(id, on) { $(id).classList.toggle('active', on); }
+
+/* ============ TAB 1 : METEO ============ */
+async function runMeteo() {
+  clearError('m_error');
+  $('m_result').innerHTML = '';
+  const city = $('m_city').value.trim();
+  const start = $('m_debut').value;
+  const end = $('m_fin').value;
+  if (!city) { showError('m_error', 'Renseigne une ville.'); return; }
+  if (!start || !end) { showError('m_error', 'Renseigne la période.'); return; }
+  if (toDate(start) > toDate(end)) { showError('m_error', 'Dates incohérentes.'); return; }
+
+  setLoading('m_loading', true);
+  try {
+    const geo = await geocode(city);
+    const agg = await fetchHistoricalWeather(geo.lat, geo.lon, start, end, geo.timezone);
+    if (!agg.length) { showError('m_error', 'Pas de données météo.'); return; }
+    const avgT = agg.reduce((s,d)=>s+d.tMax,0)/agg.length;
+    const avgR = agg.reduce((s,d)=>s+d.rain,0)/agg.length;
+    const lastDay = agg[0];
+    const headHtml = `
+      <div class="weather-now">
+        <div class="ic">${weatherIcon(avgT, avgR)}</div>
+        <div>
+          <div class="loc">${geo.name}, ${geo.country}</div>
+          <div class="sub">Moyenne sur 3 ans — ${fmtDate(toDate(start))} → ${fmtDate(toDate(end))}</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="big">${avgT.toFixed(1)}°</div>
+          <div class="sub">${avgR.toFixed(1)} mm/jour</div>
+        </div>
+      </div>`;
+    const gridHtml = `<div class="weather-grid">${agg.map(d => `
+      <div class="weather-day">
+        <div class="d">${JOUR_FR[d.date.getDay()].toUpperCase()} ${d.date.getDate()}/${d.date.getMonth()+1}</div>
+        <div class="ic">${weatherIcon(d.tMax, d.rain)}</div>
+        <div class="t">${Math.round(d.tMax)}°</div>
+        <div class="r">min ${Math.round(d.tMin)}° · ${d.rain.toFixed(1)}mm</div>
+      </div>`).join('')}</div>`;
+    $('m_result').innerHTML = headHtml + gridHtml
+      + `<div id="m_photos"></div><div id="m_visits"></div><div id="m_hotels"></div>`;
+
+    // -- Photos Pexels (fire-and-forget, silencieux si pas de clé)
+    renderPhotos(city, geo.country).catch(e => console.warn('Pexels:', e));
+    // -- Lieux à visiter (OpenAI)
+    renderVisits(city, geo.country).catch(e => console.warn('Visits:', e));
+    // -- Hôtels (Makcorps si clé, sinon estimation OpenAI)
+    renderHotels(city, geo.country, start, end).catch(e => console.warn('Hotels:', e));
+  } catch (err) {
+    showError('m_error', err.message || String(err));
+  } finally {
+    setLoading('m_loading', false);
+  }
+}
+
+async function renderPhotos(city, country) {
+  if (!$('pexelsKey').value.trim()) return;
+  $('m_photos').innerHTML = `<div class="section-title">PHOTOS <span class="sparkle">✦</span><span class="section-title-sub">  ↳ via Pexels</span></div>
+    <div style="color:var(--muted);font-family:'Caveat',cursive;font-size:16px;">chargement des images…</div>`;
+  try {
+    const photos = await fetchPexelsPhotos(`${city} ${country}`, 6);
+    if (!photos.length) { $('m_photos').innerHTML = ''; return; }
+    const gallery = photos.map((p, i) => `
+      <a class="photo-card tilted-${(i%3)+1}" href="${p.pageUrl}" target="_blank" rel="noopener">
+        <img src="${p.small}" alt="${p.alt}" loading="lazy">
+        <div class="credit">📷 ${p.photographer}</div>
+      </a>`).join('');
+    $('m_photos').innerHTML =
+      `<div class="section-title">PHOTOS <span class="sparkle">✦</span><span class="section-title-sub">  ↳ via Pexels</span></div>
+       <div class="photo-gallery">${gallery}</div>`;
+  } catch (e) {
+    $('m_photos').innerHTML = `<div class="info">📸 Pexels indisponible : ${e.message}</div>`;
+  }
+}
+
+async function renderVisits(city, country) {
+  const key = $('apiKey').value.trim();
+  if (!key) return;
+  const model = $('apiModel').value;
+  $('m_visits').innerHTML = `<div class="section-title">À VISITER <span class="sparkle">✦</span><span class="section-title-sub">  ↳ musées · monuments · plages · activités</span></div>
+    <div style="color:var(--muted);font-family:'Caveat',cursive;font-size:16px;">l'IA cherche les incontournables…</div>`;
+  try {
+    const system = `Tu es un guide de voyage français. Tu réponds UNIQUEMENT en JSON strict.`;
+    const user = `Liste 6 lieux/activités incontournables à ${city}, ${country}. Mixe : musées, monuments, plages/nature, quartiers vivants, restos locaux, activités famille/enfants.
+Retourne EXACTEMENT ce JSON :
+{
+  "lieux": [
+    { "nom": "string court", "type": "Musée|Monument|Plage|Nature|Quartier|Resto|Activité|Parc", "emoji": "un seul emoji pertinent", "description": "2 phrases concrètes : pourquoi y aller + une info pratique" }
+  ]
+}`;
+    const content = await callOpenAI({ key, model, system, user, jsonMode: true });
+    const data = JSON.parse(content);
+    const typeColor = t => {
+      if (['Musée','Quartier'].includes(t)) return 'var(--yellow)';
+      if (['Plage','Nature','Parc'].includes(t)) return 'var(--mint)';
+      if (['Resto','Activité'].includes(t)) return 'var(--coral)';
+      return 'var(--cyan-soft)';
+    };
+    const cards = (data.lieux || []).map(l => `
+      <div class="visit-card">
+        <span class="vtype" style="background:${typeColor(l.type)};">${l.type || ''}</span>
+        <h4><span class="vemoji">${l.emoji || '📍'}</span>${l.nom}</h4>
+        <p>${l.description || ''}</p>
+      </div>`).join('');
+    $('m_visits').innerHTML =
+      `<div class="section-title">À VISITER <span class="sparkle">✦</span><span class="section-title-sub">  ↳ musées · monuments · plages · activités</span></div>
+       <div class="visit-list">${cards}</div>`;
+  } catch (e) {
+    $('m_visits').innerHTML = `<div class="info">✎ Lieux indisponibles : ${e.message}</div>`;
+  }
+}
+
+async function renderHotels(city, country, checkin, checkout) {
+  const makKey = $('makcorpsKey').value.trim();
+  const aiKey  = $('apiKey').value.trim();
+
+  $('m_hotels').innerHTML = `<div class="section-title">HÔTELS <span class="sparkle">✦</span><span class="section-title-sub">  ↳ fourchettes de prix par gamme</span></div>
+    <div style="color:var(--muted);font-family:'Caveat',cursive;font-size:16px;">estimation des prix…</div>`;
+
+  // 1) Tentative Makcorps si clé fournie
+  if (makKey) {
+    try {
+      const data = await fetchMakcorpsPrices(city, checkin, checkout);
+      const hotels = extractMakcorpsHotels(data).slice(0, 4);
+      if (hotels.length) {
+        const cards = hotels.map(h => `
+          <div class="hotel-card">
+            <div class="gamme">${h.name || 'Hôtel'}</div>
+            <div class="stars">${'★'.repeat(Math.min(Math.round(h.stars||3),5))}</div>
+            <div class="price">${h.price ? Math.round(h.price) + '€' : '—'}<small>${h.currency || 'EUR'} · nuit</small></div>
+            <div class="exemple">${h.vendor || ''}</div>
+          </div>`).join('');
+        $('m_hotels').innerHTML =
+          `<div class="section-title">HÔTELS <span class="sparkle">✦</span><span class="section-title-sub">  ↳ prix temps-réel via Makcorps</span></div>
+           <div class="hotel-list">${cards}</div>
+           <div class="hotel-note">✎ prix récupérés en direct depuis Makcorps pour la période ${fmtDate(toDate(checkin))} → ${fmtDate(toDate(checkout))}</div>`;
+        return;
+      }
+    } catch (e) {
+      console.warn('Makcorps échec, fallback IA :', e);
+    }
+  }
+
+  // 2) Fallback estimation OpenAI
+  if (!aiKey) {
+    $('m_hotels').innerHTML = `<div class="info">💤 Ajoute une clé OpenAI (ou une clé Makcorps) dans les paramètres avancés pour voir les prix.</div>`;
+    return;
+  }
+  try {
+    const system = `Tu es un expert voyage. Tu réponds UNIQUEMENT en JSON strict, en euros.`;
+    const user = `Estime les prix d'une nuit d'hôtel à ${city}, ${country} autour du ${checkin} → ${checkout}, chambre double 2 personnes.
+Retourne EXACTEMENT :
+{
+  "hotels": [
+    { "gamme": "Auberge / 1★", "stars": 1, "prix_min": number, "prix_max": number, "exemple": "nom connu" },
+    { "gamme": "Milieu 2-3★", "stars": 3, "prix_min": number, "prix_max": number, "exemple": "..." },
+    { "gamme": "Confort 4★", "stars": 4, "prix_min": number, "prix_max": number, "exemple": "..." },
+    { "gamme": "Luxe 5★",    "stars": 5, "prix_min": number, "prix_max": number, "exemple": "..." }
+  ]
+}
+Fourchettes réalistes pour la saison.`;
+    const content = await callOpenAI({ key: aiKey, model: $('apiModel').value, system, user, jsonMode: true });
+    const data = JSON.parse(content);
+    const cards = (data.hotels || []).map(h => `
+      <div class="hotel-card">
+        <div class="gamme">${h.gamme || ''}</div>
+        <div class="stars">${'★'.repeat(Math.max(1, Math.min(h.stars||3, 5)))}</div>
+        <div class="price">${h.prix_min}-${h.prix_max}€<small>€ · nuit · 2 pers.</small></div>
+        <div class="exemple">${h.exemple || ''}</div>
+      </div>`).join('');
+    $('m_hotels').innerHTML =
+      `<div class="section-title">HÔTELS <span class="sparkle">✦</span><span class="section-title-sub">  ↳ fourchettes estimées par l'IA</span></div>
+       <div class="hotel-list">${cards}</div>
+       <div class="hotel-note">✎ estimation IA (ajoute une clé Makcorps pour des prix temps-réel réels).</div>`;
+  } catch (e) {
+    $('m_hotels').innerHTML = `<div class="info">🏨 Prix indisponibles : ${e.message}</div>`;
+  }
+}
+
+function extractMakcorpsHotels(data) {
+  if (!data) return [];
+  // Makcorps renvoie soit un tableau de hotels, soit un objet. On essaie plusieurs formes.
+  const arr = Array.isArray(data) ? data : (data.hotels || data.data || []);
+  return arr.map(h => {
+    const priceObj = h.vendor1 || h.price1 || h.rates?.[0] || {};
+    return {
+      name: h.name || h.hotelName || h.property || 'Hôtel',
+      stars: h.stars || h.rating || 3,
+      price: parseFloat(priceObj.price || h.price || 0) || null,
+      currency: priceObj.currency || 'EUR',
+      vendor: priceObj.vendor || priceObj.source || '',
+    };
+  }).filter(h => h.price);
+}
+
+/* ============ TAB 2 : PONTS ============ */
+function runPonts() {
+  clearError('p_error');
+  $('p_result').innerHTML = '';
+  const start = $('p_debut').value, end = $('p_fin').value;
+  if (!start || !end) { showError('p_error', 'Renseigne la période.'); return; }
+  if (toDate(start) > toDate(end)) { showError('p_error', 'Dates incohérentes.'); return; }
+
+  const bridges = findBridges(start, end);
+  if (!bridges.length) { showError('p_error', 'Aucun pont détecté sur la période.'); return; }
+
+  const stats = [
+    { n: bridges.length,                              l: 'opportunités' },
+    { n: bridges.filter(b => b.conges === 0).length,  l: 'sans congé' },
+    { n: bridges.filter(b => b.conges === 1).length,  l: 'ponts 1 jour' },
+    { n: bridges.filter(b => b.conges === 2).length,  l: 'mini-ponts 2j' },
+  ];
+  const statHtml = `<div class="stats">${stats.map(s => `<div class="stat"><div class="num">${s.n}</div><div class="lbl">${s.l}</div></div>`).join('')}</div>`;
+  const listHtml = `<div class="bridge-list">${bridges.map((b, i) => `
+    <div class="bridge-row">
+      <span class="bdate">${fmtDate(b.dateObj)} · ${JOUR_FR[b.dateObj.getDay()]}</span>
+      <span class="bname">${b.nom}<small>${b.type}</small></span>
+      <span class="bstats">
+        <span class="tag ${b.conges===0?'mint':b.conges===1?'':'yellow'}">${b.conges}j posé${b.conges>1?'s':''}</span>
+        <span class="tag plain">${b.total}j off</span>
+      </span>
+      <button class="pick" data-i="${i}">Utiliser →</button>
+    </div>`).join('')}</div>`;
+  $('p_result').innerHTML = statHtml + listHtml;
+
+  // Bind "Utiliser →" : bascule sur l'onglet Suggestions avec dates remplies
+  $('p_result').querySelectorAll('button.pick').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const b = bridges[parseInt(btn.dataset.i, 10)];
+      $('s_debut').value = b.debut;
+      $('s_fin').value   = b.fin;
+      document.querySelector('.tab[data-tab="suggestions"]').click();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+}
+
+/* ============ TAB 3 : SUGGESTIONS ============ */
+async function runSuggestions() {
+  clearError('s_error');
+  $('s_result').innerHTML = '';
+  const key = $('apiKey').value.trim();
+  const model = $('apiModel').value;
+  if (!key) { showError('s_error', 'Il faut renseigner la clé OpenAI en haut de la page.'); return; }
+
+  const ctx = {
+    debut: $('s_debut').value, fin: $('s_fin').value,
+    depart: $('s_depart').value.trim(),
+    famille: $('s_famille').value, nb_enfants: parseInt($('s_nb_enfants').value||0,10),
+    zone: $('s_zone').value, budget: $('s_budget').value,
+    ambiance: $('s_ambiance').value, trajet: parseInt($('s_trajet').value||6,10),
+    envies: $('s_envies').value.trim(),
+  };
+  if (!ctx.debut || !ctx.fin) { showError('s_error', 'Renseigne les dates du pont.'); return; }
+
+  setLoading('s_loading', true);
+  try {
+    const system = `Tu es un expert voyage français. Tu réponds UNIQUEMENT en JSON strict.`;
+    const user = `Propose 4 destinations différentes pour ce pont :
+
+PONT : du ${ctx.debut} au ${ctx.fin}
+Ville de départ : ${ctx.depart}
+Situation : ${ctx.famille} (${ctx.nb_enfants} enfant·s)
+Zone : ${ctx.zone}
+Budget par personne : ${ctx.budget}
+Ambiance : ${ctx.ambiance}
+Trajet max : ${ctx.trajet}h porte-à-porte
+Envies : ${ctx.envies || '(rien)'}
+
+Retourne EXACTEMENT ce JSON :
+{
+  "destinations": [
+    {
+      "ville": "string",
+      "pays": "string",
+      "type": "short label (mer | montagne | culture | nature | gastro | famille | aventure)",
+      "description": "3-4 phrases concrètes adaptées à la situation familiale",
+      "pourquoi_pont": "1 phrase : pourquoi c'est adapté à ce pont précis",
+      "budget_estime": "ex: 450-600€/pers",
+      "duree_trajet": "ex: 2h30 en TGV"
+    }
+  ]
+}
+Varie les profils (1 proche, 1 lointain, 1 surprise…). Adapte absolument au contexte familial.`;
+
+    const content = await callOpenAI({ key, model, system, user, jsonMode: true });
+    let data;
+    try { data = JSON.parse(content); }
+    catch(e) { throw new Error('Réponse IA non-JSON.'); }
+
+    const typeColor = t => {
+      if (['mer','plage'].includes(t)) return 'var(--cyan)';
+      if (['nature','montagne'].includes(t)) return 'var(--mint)';
+      if (['gastro','aventure'].includes(t)) return 'var(--coral)';
+      return 'var(--yellow)';
+    };
+
+    $('s_result').innerHTML = `<div class="suggestion-grid">${(data.destinations||[]).map((d,i) => `
+      <div class="suggestion">
+        <span class="stype" style="background: ${typeColor(d.type)};">${d.type || ''}</span>
+        <h3>${d.ville}</h3>
+        <div class="sloc">${d.pays || ''}</div>
+        <div class="sdesc">${d.description || ''}</div>
+        <div class="smeta">✎ ${d.pourquoi_pont || ''}</div>
+        <div style="margin-top:10px; display: flex; gap: 6px; flex-wrap: wrap;">
+          ${d.budget_estime ? `<span class="tag yellow">${d.budget_estime}</span>` : ''}
+          ${d.duree_trajet  ? `<span class="tag plain">🚆 ${d.duree_trajet}</span>` : ''}
+        </div>
+        <button class="btn btn-yellow sugg-meteo-btn"
+                data-ville="${(d.ville||'').replace(/"/g,'&quot;')}"
+                data-pays="${(d.pays||'').replace(/"/g,'&quot;')}"
+                data-debut="${ctx.debut}" data-fin="${ctx.fin}"
+                style="font-size:14px; padding:9px 16px; margin-top:14px; box-shadow:3px 3px 0 var(--ink);">
+          🌤️ MÉTÉO · PHOTOS · HÔTELS →
+        </button>
+      </div>`).join('')}</div>`;
+
+    // Bind : chaque bouton bascule sur Météo avec ville/pays/dates pré-remplis + lance la recherche
+    $('s_result').querySelectorAll('.sugg-meteo-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ville = btn.dataset.ville;
+        const pays  = btn.dataset.pays;
+        const debut = btn.dataset.debut;
+        const fin   = btn.dataset.fin;
+        const query = pays ? `${ville}, ${pays}` : ville;
+        $('m_city').value  = query;
+        $('m_debut').value = debut;
+        $('m_fin').value   = fin;
+        document.querySelector('.tab[data-tab="meteo"]').click();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Lance la recherche automatiquement
+        setTimeout(() => runMeteo(), 120);
+      });
+    });
+  } catch (err) {
+    showError('s_error', err.message || String(err));
+  } finally {
+    setLoading('s_loading', false);
+  }
+}
+
+/* ============ TAB 4 : PLANNING ============ */
+async function runPlanning() {
+  clearError('pl_error');
+  $('pl_result').innerHTML = '';
+  const key = $('apiKey').value.trim();
+  const model = $('apiModel').value;
+  if (!key) { showError('pl_error', 'Il faut renseigner la clé OpenAI en haut de la page.'); return; }
+
+  const ctx = {
+    depart: $('pl_depart').value.trim(),
+    conges: parseInt($('pl_conges').value||0,10),
+    debut: $('pl_debut').value, fin: $('pl_fin').value,
+    famille: $('pl_famille').value, nb_enfants: parseInt($('pl_nb_enfants').value||0,10),
+    zone: $('pl_zone').value, budget: $('pl_budget').value,
+    ambiance: $('pl_ambiance').value, trajet: parseInt($('pl_trajet').value||6,10),
+    contraintes: $('pl_contraintes').value.trim(),
+    envies: $('pl_envies').value.trim(),
+  };
+  if (!ctx.debut || !ctx.fin || toDate(ctx.debut) > toDate(ctx.fin)) { showError('pl_error', 'Dates incohérentes.'); return; }
+  if (ctx.conges < 1) { showError('pl_error', 'Renseigne au moins 1 jour de congés.'); return; }
+
+  setLoading('pl_loading', true);
+  try {
+    $('pl_lbl').textContent = 'Détection des ponts…';
+    const bridges = findBridges(ctx.debut, ctx.fin);
+    if (!bridges.length) { showError('pl_error', 'Aucun pont sur la période.'); return; }
+
+    $('pl_lbl').textContent = 'L\'IA compose ton planning (1/2)…';
+    const system = `Tu es un expert français en optimisation des congés payés. Tu réponds TOUJOURS en JSON strict.
+Tu exploites à fond TOUT le budget de congés : tu proposes un MIX intelligent entre :
+  • ponts courts (week-ends de 3j sans congé, ponts de 4j avec 1 congé, mini-ponts)
+  • séjours plus longs (5-7 jours → semaine de vacances)
+  • vraies semaines de vacances (7-14 jours autour d'un férié ou en plein milieu d'été/hiver)
+  • parfois 2 semaines consécutives pour un gros voyage.
+Tu N'INVENTES PAS de dates fériées — les ponts fournis sont donnés, mais tu peux en plus proposer des séjours purement sur congés hors pont (ex : 2 semaines en août sans férié) quand c'est pertinent pour la famille.
+Tu dois poser AU TOTAL exactement ${ctx.conges} jours de congés (pas moins — pas 1 ou 2 jours juste pour "remplir", mais la totalité, répartie intelligemment).
+Tu choisis UNE destination principale cohérente avec la situation, le budget, l'ambiance et le trajet max.`;
+
+    const bridgesList = bridges.map(b => ({
+      date: b.date, jour: b.jour, nom: b.nom, type: b.type,
+      conges_a_poser: b.conges, total_off: b.total, debut: b.debut, fin: b.fin,
+    }));
+
+    const user = `SITUATION :
+- Ville de départ : ${ctx.depart}
+- Situation : ${ctx.famille} (${ctx.nb_enfants} enfant·s)
+- Zone : ${ctx.zone} · Budget : ${ctx.budget} · Ambiance : ${ctx.ambiance} · Trajet max : ${ctx.trajet}h
+
+CONTRAINTES PRO :
+${ctx.contraintes || '(aucune)'}
+
+ENVIES :
+${ctx.envies || '(rien)'}
+
+CONGÉS À POSER : ${ctx.conges} jours — ABSOLUMENT TOUS — à répartir sur ${ctx.debut} → ${ctx.fin}.
+
+PONTS_DISPONIBLES (tu peux en utiliser tout ou partie, mais tu peux aussi proposer des semaines hors pont) :
+${JSON.stringify(bridgesList, null, 0)}
+
+STRATÉGIE ATTENDUE :
+- mix 3-6 séquences de durées variées (courtes + au moins une semaine longue)
+- "type" peut être : "Week-end de 3 jours", "Pont", "Mini-pont", "Semaine", "Quinzaine"
+- utilise ABSOLUMENT ${ctx.conges} jours au total (additionne bien tes jours_conges_poses)
+- la destination principale est liée à la séquence la plus longue
+
+Retourne EXACTEMENT ce JSON :
+{
+  "planning": [
+    { "titre": "string (ex: Pont de l'Ascension, Semaine d'août...)",
+      "debut": "YYYY-MM-DD", "fin": "YYYY-MM-DD",
+      "jours_conges_poses": number, "jours_off_total": number,
+      "type": "Week-end de 3 jours|Pont|Mini-pont|Semaine|Quinzaine",
+      "justification": "courte phrase" }
+  ],
+  "total_conges_utilises": number,
+  "destination": {
+    "ville": "string", "pays": "string",
+    "debut_voyage": "YYYY-MM-DD", "fin_voyage": "YYYY-MM-DD",
+    "pourquoi": "2-3 phrases"
+  },
+  "conseils": "markdown: 3-6 conseils pratiques"
+}
+total_conges_utilises DOIT être égal à ${ctx.conges}.`;
+
+    const content = await callOpenAI({ key, model, system, user, jsonMode: true });
+    let plan;
+    try { plan = JSON.parse(content); }
+    catch(e) { throw new Error('Réponse IA non-JSON.'); }
+
+    // Fetch weather for the destination's travel window
+    $('pl_lbl').textContent = 'Météo historique de la destination (2/2)…';
+    let weatherHtml = '';
+    try {
+      let geo;
+      try { geo = await geocode(plan.destination.ville + ', ' + plan.destination.pays); }
+      catch(e) { geo = await geocode(plan.destination.ville); }
+      const agg = await fetchHistoricalWeather(geo.lat, geo.lon, plan.destination.debut_voyage, plan.destination.fin_voyage, geo.timezone);
+      if (agg.length) {
+        const avgT = agg.reduce((s,d)=>s+d.tMax,0)/agg.length;
+        const avgR = agg.reduce((s,d)=>s+d.rain,0)/agg.length;
+        weatherHtml = `<div class="paper-card" style="margin-top:20px;">
+          <h2>MÉTÉO HISTORIQUE <span class="sparkle">✦</span></h2>
+          <div class="section-sub">✎ ${plan.destination.ville} · moyenne sur 3 ans</div>
+          <div class="weather-now">
+            <div class="ic">${weatherIcon(avgT, avgR)}</div>
+            <div>
+              <div class="loc">${geo.name}, ${geo.country}</div>
+              <div class="sub">${fmtDate(toDate(plan.destination.debut_voyage))} → ${fmtDate(toDate(plan.destination.fin_voyage))}</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="big">${avgT.toFixed(1)}°</div>
+              <div class="sub">${avgR.toFixed(1)} mm/jour</div>
+            </div>
+          </div>
+          <div class="weather-grid">${agg.map(d => `
+            <div class="weather-day">
+              <div class="d">${JOUR_FR[d.date.getDay()].toUpperCase()} ${d.date.getDate()}/${d.date.getMonth()+1}</div>
+              <div class="ic">${weatherIcon(d.tMax, d.rain)}</div>
+              <div class="t">${Math.round(d.tMax)}°</div>
+              <div class="r">min ${Math.round(d.tMin)}° · ${d.rain.toFixed(1)}mm</div>
+            </div>`).join('')}
+          </div>
+        </div>`;
+      }
+    } catch(e) { console.warn('Météo échouée :', e); }
+
+    const stats = [
+      { n: plan.total_conges_utilises, l: 'jours posés' },
+      { n: plan.planning.reduce((s,p)=>s + (p.jours_off_total||0), 0), l: 'jours off' },
+      { n: plan.planning.length, l: 'séquences' },
+    ];
+    const statsHtml = `<div class="stats">${stats.map(s => `<div class="stat"><div class="num">${s.n}</div><div class="lbl">${s.l}</div></div>`).join('')}</div>`;
+
+    const infoHtml = `<div class="info">✎ coche les séquences qui t'intéressent pour les combiner dans ton calendrier annuel global ↓</div>`;
+
+    const listHtml = `<div class="plan-list">${plan.planning.map((p, i) => `
+      <div class="plan-row" data-plan-idx="${i}">
+        <div class="when">
+          <input type="checkbox" class="plan-check" data-idx="${i}" checked>
+          ${fmtDate(toDate(p.debut))} → ${fmtDate(toDate(p.fin))}
+        </div>
+        <div class="what">${p.titre}<small>${p.justification || ''} · <b>${p.type || ''}</b></small></div>
+        <div class="cost">${p.jours_conges_poses}j posé${p.jours_conges_poses>1?'s':''}<small>${p.jours_off_total}j off</small></div>
+      </div>`).join('')}</div>`;
+
+    const d = plan.destination;
+    const destHtml = `<div class="destination-hero">
+      <div class="kicker">✎ on te propose…</div>
+      <div class="city">${d.ville}</div>
+      <div class="country">${d.pays}</div>
+      <div class="dates">${fmtDate(toDate(d.debut_voyage))} → ${fmtDate(toDate(d.fin_voyage))}</div>
+      <div class="why">${d.pourquoi}</div>
+    </div>`;
+
+    const adviceHtml = plan.conseils ? `<div class="advice">${mdToHtml(plan.conseils)}</div>` : '';
+
+    const yearFrom = toDate(ctx.debut).getFullYear();
+    const yearTo   = toDate(ctx.fin).getFullYear();
+    const yearMiniHtml = `<div class="year-mini">
+      <h3>MON ANNÉE — aperçu global des séquences cochées</h3>
+      <div id="year_mini_grid" class="year-mini-grid" data-from="${yearFrom}" data-to="${yearTo}"></div>
+    </div>`;
+
+    const combineBarHtml = `<div id="plan_combine_bar" class="plan-combine-bar active">
+      <div class="ccount"><span id="combine_count">0</span> jours posés · <span id="combine_off">0</span> jours off
+        <small id="combine_seq">0 séquences cochées</small>
+      </div>
+      <div class="bar-actions">
+        <button id="btnSelectAll" class="primary">Tout cocher</button>
+        <button id="btnSelectNone">Tout décocher</button>
+      </div>
+    </div>`;
+
+    $('pl_result').innerHTML = statsHtml + infoHtml + '<hr class="dash-sep">' + listHtml + combineBarHtml + yearMiniHtml + destHtml + weatherHtml + adviceHtml;
+
+    // ====== Gestion sélection + mini-calendrier année ======
+    const planningItems = plan.planning;
+    function rebuildYearMini() {
+      const checks = Array.from($('pl_result').querySelectorAll('.plan-check'));
+      const selected = checks.filter(c => c.checked).map(c => planningItems[parseInt(c.dataset.idx,10)]);
+      // maj classes .plan-row
+      checks.forEach(c => {
+        const row = c.closest('.plan-row');
+        if (c.checked) row.classList.add('selected-plan');
+        else row.classList.remove('selected-plan');
+      });
+      // totaux
+      const totalC = selected.reduce((s,p)=>s+(p.jours_conges_poses||0),0);
+      const totalO = selected.reduce((s,p)=>s+(p.jours_off_total||0),0);
+      $('combine_count').textContent = totalC;
+      $('combine_off').textContent = totalO;
+      $('combine_seq').textContent = `${selected.length} séquence${selected.length>1?'s':''} cochée${selected.length>1?'s':''}`;
+      renderYearMini(yearFrom, yearTo, selected);
+    }
+
+    $('pl_result').querySelectorAll('.plan-check').forEach(cb => {
+      cb.addEventListener('change', rebuildYearMini);
+    });
+    $('btnSelectAll').addEventListener('click', () => {
+      $('pl_result').querySelectorAll('.plan-check').forEach(c => c.checked = true);
+      rebuildYearMini();
+    });
+    $('btnSelectNone').addEventListener('click', () => {
+      $('pl_result').querySelectorAll('.plan-check').forEach(c => c.checked = false);
+      rebuildYearMini();
+    });
+    rebuildYearMini();
+  } catch (err) {
+    showError('pl_error', err.message || String(err));
+  } finally {
+    setLoading('pl_loading', false);
+  }
+}
+
+/* ============ TAB 5 : CALENDRIER ============ */
+const HOLIDAY_MAP = (() => {
+  const m = new Map();
+  for (const h of HOLIDAYS) m.set(h.date, h.nom);
+  return m;
+})();
+
+const calSelection = new Set(); // ISO dates "YYYY-MM-DD"
+
+function renderMonth(year, month, opts) {
+  // opts = { onClick, selection:Set, trip:Set, tripConge:Set, showBridges:bool, mini:bool }
+  const first = new Date(year, month, 1);
+  const last  = new Date(year, month + 1, 0);
+  // Lundi en premier (0=Dim → décaler)
+  const offset = (first.getDay() + 6) % 7;
+  const weeks = ['L','M','M','J','V','S','D'];
+  let html = `<div class="cal-month"><div class="cal-head">${MOIS_FR[month]} ${year}</div><div class="cal-days">`;
+  for (const d of weeks) html += `<div class="dow">${d}</div>`;
+  for (let i = 0; i < offset; i++) html += `<div class="day empty"></div>`;
+  const bridgeSet = opts.bridgeSet || new Set();
+  for (let day = 1; day <= last.getDate(); day++) {
+    const dateObj = new Date(year, month, day);
+    const iso = isoDate(dateObj);
+    const wd  = dateObj.getDay();
+    const cls = ['day'];
+    const title = [];
+    if (opts.trip && opts.trip.has(iso))       cls.push('in-trip');
+    if (opts.tripConge && opts.tripConge.has(iso)) cls.push('trip-conge');
+    if (opts.selection && opts.selection.has(iso)) cls.push('selected');
+    if (HOLIDAY_MAP.has(iso)) { cls.push('holiday'); title.push(HOLIDAY_MAP.get(iso)); }
+    else if (opts.showBridges && bridgeSet.has(iso)) { cls.push('bridge'); title.push('Pont optimisable'); }
+    else if (wd === 0 || wd === 6) cls.push('weekend');
+    html += `<div class="${cls.join(' ')}" data-iso="${iso}"${title.length?` title="${title.join(' · ')}"`:''}>${day}</div>`;
+  }
+  html += `</div></div>`;
+  return html;
+}
+
+function renderCalendar(year) {
+  const bridges = findBridges(`${year}-01-01`, `${year}-12-31`);
+  const bridgeSet = new Set();
+  for (const b of bridges) {
+    const s = toDate(b.debut), e = toDate(b.fin);
+    for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)) {
+      bridgeSet.add(isoDate(d));
+    }
+  }
+  // Retire les dates qui sont déjà fériées (elles auront classe holiday)
+  let html = '';
+  for (let m = 0; m < 12; m++) {
+    html += renderMonth(year, m, { selection: calSelection, showBridges: true, bridgeSet });
+  }
+  $('cal_grid').innerHTML = html;
+  // Bind clicks
+  $('cal_grid').querySelectorAll('.day:not(.empty)').forEach(d => {
+    d.addEventListener('click', () => {
+      const iso = d.dataset.iso;
+      if (calSelection.has(iso)) calSelection.delete(iso);
+      else calSelection.add(iso);
+      d.classList.toggle('selected');
+      updateCalSelectionBar();
+    });
+  });
+  updateCalSelectionBar();
+}
+
+function updateCalSelectionBar() {
+  const bar = $('cal_sel_bar');
+  const n = calSelection.size;
+  $('cal_sel_count').textContent = n;
+  if (n === 0) { bar.classList.remove('active'); $('cal_sel_range').textContent = '—'; return; }
+  bar.classList.add('active');
+  const sorted = Array.from(calSelection).sort();
+  const first = sorted[0], last = sorted[sorted.length-1];
+  $('cal_sel_range').textContent = `du ${fmtDate(toDate(first))} au ${fmtDate(toDate(last))}`;
+}
+
+function clearCalSelection() {
+  calSelection.clear();
+  $('cal_grid').querySelectorAll('.day.selected').forEach(d => d.classList.remove('selected'));
+  updateCalSelectionBar();
+}
+
+function renderYearMini(yearFrom, yearTo, selectedPlans) {
+  const tripDays = new Set(), congeDays = new Set();
+  for (const p of selectedPlans) {
+    const s = toDate(p.debut), e = toDate(p.fin);
+    for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)) {
+      tripDays.add(isoDate(d));
+    }
+    // Jours de congés posés = jours ouvrés (lun-ven hors fériés) dans la fenêtre
+    // Approximation : on marque tous les jours ouvrés non fériés comme "trip-conge"
+    for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)) {
+      const iso = isoDate(d);
+      const wd = d.getDay();
+      if (wd >= 1 && wd <= 5 && !HOLIDAY_MAP.has(iso)) {
+        congeDays.add(iso);
+      }
+    }
+  }
+  let html = '';
+  for (let y = yearFrom; y <= yearTo; y++) {
+    for (let m = 0; m < 12; m++) {
+      html += renderMonth(y, m, { trip: tripDays, tripConge: congeDays });
+    }
+  }
+  if ($('year_mini_grid')) $('year_mini_grid').innerHTML = html;
+}
+
+/* ============ INIT ============ */
+function toggleKey() { const i = $('apiKey'); i.type = (i.type === 'password') ? 'text' : 'password'; }
+
+(function init() {
+  const DEFAULT_KEY = '';
+  const DEFAULT_PEXELS = '';
+
+  const saved = localStorage.getItem('openai_key');
+  $('apiKey').value = saved || DEFAULT_KEY;
+
+  const savedPexels = localStorage.getItem('pexels_key');
+  $('pexelsKey').value = savedPexels || DEFAULT_PEXELS;
+
+  const savedMak = localStorage.getItem('makcorps_key');
+  if (savedMak) $('makcorpsKey').value = savedMak;
+
+  const savedModel = localStorage.getItem('openai_model');
+  if (savedModel) $('apiModel').value = savedModel;
+
+  $('btnMeteo').addEventListener('click', runMeteo);
+  $('btnPonts').addEventListener('click', runPonts);
+  $('btnSuggest').addEventListener('click', runSuggestions);
+  $('btnPlan').addEventListener('click', runPlanning);
+
+  // ============ CALENDRIER ============
+  renderCalendar(parseInt($('cal_year').value || 2026, 10));
+  $('cal_year').addEventListener('change', () => {
+    clearCalSelection();
+    renderCalendar(parseInt($('cal_year').value, 10));
+  });
+  $('btnCalPrev').addEventListener('click', () => {
+    const y = parseInt($('cal_year').value, 10);
+    if (y > 2026) { $('cal_year').value = y - 1; clearCalSelection(); renderCalendar(y - 1); }
+  });
+  $('btnCalNext').addEventListener('click', () => {
+    const y = parseInt($('cal_year').value, 10);
+    if (y < 2076) { $('cal_year').value = y + 1; clearCalSelection(); renderCalendar(y + 1); }
+  });
+  $('btnCalClear').addEventListener('click', clearCalSelection);
+  $('btnCalReset').addEventListener('click', clearCalSelection);
+  $('btnCalSuggest').addEventListener('click', () => {
+    if (calSelection.size === 0) return;
+    const sorted = Array.from(calSelection).sort();
+    const first = sorted[0], last = sorted[sorted.length-1];
+    $('s_debut').value = first;
+    $('s_fin').value   = last;
+    document.querySelector('.tab[data-tab="suggestions"]').click();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Persist keys on change
+  $('apiKey').addEventListener('change', () => {
+    if ($('rememberKey').checked) localStorage.setItem('openai_key', $('apiKey').value.trim());
+  });
+  $('pexelsKey').addEventListener('change', () => {
+    if ($('rememberKey').checked) localStorage.setItem('pexels_key', $('pexelsKey').value.trim());
+  });
+  $('makcorpsKey').addEventListener('change', () => {
+    if ($('rememberKey').checked) localStorage.setItem('makcorps_key', $('makcorpsKey').value.trim());
+  });
+  $('apiModel').addEventListener('change', () => localStorage.setItem('openai_model', $('apiModel').value));
+
+  console.log(`IA Voyage prêt · ${HOLIDAYS.length} jours fériés embarqués`);
+})();
+</script>
+
+</body>
+</html>
